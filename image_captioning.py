@@ -1,0 +1,1 @@
+# First version of the code for image captioning using a pre-trained model. This code uses the Hugging Face Transformers library to generate captions for images.
