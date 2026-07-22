@@ -61,7 +61,10 @@ durumunu/eylemini ve öne çıkan görsel detayları (renk, konum, ortam) içerm
 ikincil detayları KAYBETME, KURAL 6 uyarınca etiketlere yansıt.
 KURAL 4: Görselde KESİNLİKLE olmayan hiçbir şeyi UYDURMA. Bir ayrıntıdan (tür, model, tam renk dahil)
 emin değilsen o ayrıntıyı YAZMA veya daha genel bir terimle belirt; net kanıtın olmadığı spesifik bir
-iddiada bulunma.
+iddiada bulunma. Bu kural bir nesnenin ALT TÜRÜ için olduğu kadar TEMEL KİMLİĞİ için de geçerlidir:
+bir nesnenin ne olduğundan (ör. yiyecek mi, oyuncak mı, alet mi) emin değilsen, ona benzeyen bilinen
+bir nesnenin adını TAHMİN ETME; bunun yerine sadece gördüğün somut görsel özellikleriyle tarif et
+(şekil, renk, malzeme görünümü — ör. "yuvarlak, cilalı, açık kahverengi bir nesne").
 KURAL 5: Yoruma girme, "bu görselde şu var" gibi meta cümleler kurma; "aciklama" alanına DOĞRUDAN
 betimlemeyi yaz.
 KURAL 6: Fotoğrafı en iyi yansıtan en fazla 6 adet TÜRKÇE etiket üret (nesneler, ortam, renk,
