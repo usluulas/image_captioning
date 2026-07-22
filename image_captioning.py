@@ -16,30 +16,19 @@ pillow_heif.register_heif_opener()
 # ==========================================
 MODEL_ADI = "gemma3:4b"
 
-# Nihai sentez çağrısı hem görseli hem de NUM_TARAMA adet tarama metnini birden aldığı için
-# tek-geçişli sürüme göre daha fazla bağlama ihtiyaç var; yine de 4GB VRAM'i zorlamamak için
-# ölçülü tutuldu.
-NUM_CTX = 6144
+# Görsel + kısa metin promptu için 8192'ye gerek yok; daha düşük context KV cache'i
+# küçültüp 4GB VRAM'de görsel kodlayıcıya daha fazla bellek bırakır.
+NUM_CTX = 4096
 
 # Makine bu işlem sırasında başka iş için kullanılmıyor, tüm çekirdekler kullanılabilir.
 NUM_THREAD = os.cpu_count() or 4
 
-# Nihai çıktı (tek cümlelik betimleme + etiketler + tutarlılık notu) için yeterli pay.
+# Modelin önce görseli ayrıntılı taraması ("gozlemler" alanı), sonra betimleme + etiketleri
+# üretmesi gerektiği için tek cümlelik çıktıya göre daha geniş bir pay bırakıldı.
 NUM_PREDICT = 700
 
-# --- SELF-CONSISTENCY (TUTARLILIK KONTROLÜ) AYARLARI ---
-# Model tek bir üretimde kendinden emin ama YANLIŞ olabiliyor (ör. bir nesneyi kendinden emin
-# şekilde "patates" sanması); "belirsizsen yazma" talimatı bunu yakalayamıyor çünkü model kendini
-# belirsiz hissetmiyor. Çözüm: aynı görseli NUM_TARAMA kez bağımsız taratıp, taramalar arasındaki
-# TUTARSIZLIĞI dışarıdan bir belirsizlik sinyali olarak kullanmak (nihai sentez adımında).
-NUM_TARAMA = 3
-TARAMA_TEMPERATURE = 0.4
-TARAMA_NUM_PREDICT = 400
-
-# temperature 0.0 (greedy) NİHAİ sentezi deterministik yapar. Tarama adımlarında ise kasıtlı
-# olarak TARAMA_TEMPERATURE kullanılır (bkz. yukarısı) — taramaların birbirinden görece farklı
-# çıkması, belirsiz noktaları ortaya çıkarmak için gerekli.
-# repeat_penalty greedy/örneklemeli decoding'de oluşabilecek tekrar döngülerine karşı güvenlik payı.
+# temperature 0.0 (greedy) modeli deterministik yapar, halüsinasyonu azaltır.
+# repeat_penalty greedy decoding'de oluşabilecek tekrar döngülerine karşı güvenlik payı.
 ORTAK_SECENEKLER = {
     'num_ctx': NUM_CTX,
     'num_thread': NUM_THREAD,
@@ -51,58 +40,45 @@ DESTEKLENEN_UZANTILAR = (".jpg", ".jpeg", ".png", ".webp", ".bmp", ".heic", ".he
 
 
 # ==========================================
-# 1. PROMPT ŞABLONLARI
+# 1. PROMPT ŞABLONU
 # ==========================================
-# NOT: Bu, TEK bir tarama çağrısının promptu. Kasıtlı olarak temkinsiz/serbest bırakıldı —
-# NUM_TARAMA kez bağımsız çalıştırılıp modelin gerçekte NE KADAR emin olduğu, taramalar
-# birbirine ne kadar UYDUĞUNA bakılarak (nihai sentez adımında) belirlenecek. Burada hedge
-# ettirmeye çalışmak, her taramanın aynı temkinli/muğlak cevaba çekilmesine ve asıl belirsizlik
-# sinyalinin kaybolmasına yol açar.
-TARAMA_TALIMATI = """
-Sen bir görsel analiz asistanısın. Sana verilen fotoğrafı en ince ayrıntısına kadar tara.
-Ön plandaki ve arka plandaki TÜM nesneleri, kişileri/hayvanları, renklerini, konumlarını
-(sağ/sol/üst/alt/ortada), eylemlerini, ortamı ve varsa görünen yazıları TÜRKÇE kısa maddeler
-halinde yaz. Gördüğünü olduğu gibi, çekinmeden yaz; bu sadece bir ön tarama, temkinli davranmana
-gerek yok. SADECE maddeleri yaz, başka açıklama/giriş cümlesi ekleme.
-"""
-
-# NOT: Bu, görsel + NUM_TARAMA adet bağımsız tarama metnini birlikte alan NİHAİ sentez çağrısının
-# promptu. Asıl "belirsizse uydurma" mantığı burada uygulanıyor: model artık kendi iç belirsizliğini
-# tahmin etmek zorunda değil, taramalar arasındaki somut ANLAŞMAZLIĞA bakabiliyor.
 SISTEM_MESAJI = """
-Sen profesyonel bir Arşiv Asistanısın. Sana bir fotoğraf ve o fotoğrafın birbirinden bağımsız
-yapılmış {NUM_TARAMA} ayrı taramasını vereceğim. Görevin bunlara dayanarak nihai TÜRKÇE betimleme
-ve etiketleri üretmek.
+Sen profesyonel bir Arşiv Asistanısın. Sana verilen fotoğrafı betimleyeceksin.
 KURAL 1: Çıktındaki her bir kelime KESİNLİKLE TÜRKÇE olmalıdır.
-KURAL 2: Taramaların HEPSİNDE (ya da açık çoğunluğunda) TUTARLI şekilde geçen nesne, renk, konum
-ve detayları gerçek kabul et; bunları "tutarli_detaylar" alanına kısa maddeler halinde yaz.
-KURAL 3: Bir tarama diğerlerinde hiç geçmeyen ya da diğerleriyle ÇELİŞEN bir nesne/detaydan
-bahsediyorsa (ör. 3 taramadan sadece 1'i bir nesneyi "patates" derken diğerleri hiç bahsetmiyor
-ya da farklı bir şey söylüyorsa), bunu KESİN bilgi sayma. Böyle bir anlaşmazlık durumunda o
-nesneyi/detayı ya atla ya da sadece gördüğün somut görsel özellikleriyle (şekil, renk, malzeme
-görünümü) genel bir ifadeyle geç — ona benzeyen bilinen bir nesnenin adını TAHMİN ETME.
-KURAL 4: Renkleri taramalarda GERÇEKTEN belirtildiği gibi yaz (bir hayvanın/nesnenin üzerinde
-birden fazla renk lekesi varsa hepsini say, tek bir genel renge indirgeme). Bir nesnenin/canlının
-alt türünü ya da modelini (ör. bas gitar mı elektro gitar mı, kedi ırkı ne) sadece taramaların
-net ve tutarlı şekilde desteklediği durumda belirt; taramalar arasında bu konuda çelişki veya
-belirsizlik varsa üst kategoriyi kullan (ör. sadece "gitar", "kedi").
-KURAL 5: "tutarli_detaylar" listene dayanarak akıcı TEK bir cümlelik betimleme üret; ana özneyi,
+KURAL 2: Önce görseli baştan sona TARA: ön plandaki ve arka plandaki TÜM nesneleri, kişileri/
+hayvanları, renklerini, konumlarını (sağ/sol/üst/alt/ortada), eylemlerini, ortamı ve varsa görünen
+yazıları tek tek fark et; bunları "gozlemler" alanına kısa maddeler halinde yaz. Renkleri GERÇEKTEN
+GÖRDÜĞÜN gibi yaz (bir hayvanın/nesnenin üzerinde birden fazla renk lekesi varsa hepsini say, tek
+bir genel renge indirgeme). Bir nesnenin/canlının alt türünü ya da modelini (ör. bas gitar mı elektro
+gitar mı, kedi ırkı ne) belirtmeden önce bunu destekleyen somut, sayılabilir bir kanıtı (tel sayısı,
+gövde/kafa şekli, ayırt edici desen) gözleminde belirt; böyle bir kanıtın yoksa daha genel ve güvenli
+bir terim kullan (ör. "gitar", "kedi"). Görsel olarak birbirine çok benzeyen alt türler arasında (ör.
+bas gitar / elektro gitar / akustik gitar; kedi / kaplan; farklı köpek ırkları) KESİN ayrım
+yapamıyorsan asla spesifik olanı seçme, üst kategoriyi (ör. sadece "gitar") kullan.
+KURAL 3: "gozlemler" taramana dayanarak akıcı TEK bir cümlelik betimleme üret; ana özneyi,
 durumunu/eylemini ve öne çıkan görsel detayları (renk, konum, ortam) içermeli. Üslup örneği:
-"Yeşil kanepenin üstünde yatan siyah bir kedi". Tutarlı olup ana cümleye sığmayan ikincil
-detayları KAYBETME, KURAL 7 uyarınca etiketlere yansıt.
-KURAL 6: Yoruma girme, "bu görselde şu var" gibi meta cümleler kurma; "aciklama" alanına DOĞRUDAN
+"Yeşil kanepenin üstünde yatan siyah bir kedi". Taramada fark edip ana cümleye sığdıramadığın
+ikincil detayları KAYBETME, KURAL 6 uyarınca etiketlere yansıt.
+KURAL 4: Görselde KESİNLİKLE olmayan hiçbir şeyi UYDURMA. Bir ayrıntıdan (tür, model, tam renk dahil)
+emin değilsen o ayrıntıyı YAZMA veya daha genel bir terimle belirt; net kanıtın olmadığı spesifik bir
+iddiada bulunma. Bu kural bir nesnenin ALT TÜRÜ için olduğu kadar TEMEL KİMLİĞİ için de geçerlidir:
+bir nesnenin ne olduğundan (ör. yiyecek mi, oyuncak mı, alet mi) emin değilsen, ona benzeyen bilinen
+bir nesnenin adını TAHMİN ETME; bunun yerine sadece gördüğün somut görsel özellikleriyle tarif et
+(şekil, renk, malzeme görünümü — ör. "yuvarlak, cilalı, açık kahverengi bir nesne").
+KURAL 5: Yoruma girme, "bu görselde şu var" gibi meta cümleler kurma; "aciklama" alanına DOĞRUDAN
 betimlemeyi yaz.
-KURAL 7: Fotoğrafı en iyi yansıtan en fazla 6 adet TÜRKÇE etiket üret (nesneler, ortam, renk,
-eylem, tür/kategori gibi), sadece "tutarli_detaylar" listenden. Her etiket kısa olmalı (tek kelime
-veya en fazla 2-3 kelimelik öbek), tam cümle YAZMA.
-KURAL 8: Aynı anlama gelen etiketi tekrar etme.
+KURAL 6: Fotoğrafı en iyi yansıtan en fazla 6 adet TÜRKÇE etiket üret (nesneler, ortam, renk,
+eylem, tür/kategori gibi). Taramada fark edip ana cümleye giremeyen önemli nesne/detayları
+öncelikle etiketlere ekle. Her etiket kısa olmalı (tek kelime veya en fazla 2-3 kelimelik öbek),
+tam cümle YAZMA.
+KURAL 7: Aynı anlama gelen etiketi tekrar etme.
 
 Yanıtını KESİNLİKLE SADECE aşağıdaki JSON formatında ver:
-{{
-    "tutarli_detaylar": "Taramalar arasında tutarlı olan nesne, renk, konum ve eylemlerin kısa maddeler halindeki listesi",
+{
+    "gozlemler": "Görseldeki tüm nesne, renk, konum ve eylemlerin kısa maddeler halinde taraması",
     "aciklama": "Görselin KESİNLİKLE TÜRKÇE, tek cümlelik betimlemesi",
     "etiketler": ["etiket1", "etiket2", "etiket3", "etiket4", "etiket5", "etiket6"]
-}}
+}
 """
 
 
@@ -151,41 +127,15 @@ def gorsel_veri_hazirla(dosya_yolu):
         return arabellek.getvalue()
 
 
-def gorseli_tara(gorsel_verisi):
-    yanit = ollama.chat(
-        model=MODEL_ADI,
-        messages=[
-            {'role': 'system', 'content': TARAMA_TALIMATI},
-            {'role': 'user', 'content': 'Bu fotoğrafı tara.', 'images': [gorsel_verisi]},
-        ],
-        options={
-            'num_ctx': NUM_CTX,
-            'num_thread': NUM_THREAD,
-            'temperature': TARAMA_TEMPERATURE,
-            'repeat_penalty': 1.15,
-            'num_predict': TARAMA_NUM_PREDICT,
-        },
-        keep_alive='5m',  # Ardışık taramalar arasında modeli bellekte tut, her seferinde yeniden yükleme.
-    )
-    return yanit['message']['content'].strip()
-
-
 def gorseli_betimle(dosya_yolu):
-    gorsel_verisi = gorsel_veri_hazirla(dosya_yolu)
-
-    taramalar = [gorseli_tara(gorsel_verisi) for _ in range(NUM_TARAMA)]
-    taramalar_metni = "\n\n".join(
-        f"--- TARAMA {i + 1} ---\n{tarama}" for i, tarama in enumerate(taramalar)
-    )
-
     response = ollama.chat(
         model=MODEL_ADI,
         messages=[
-            {'role': 'system', 'content': SISTEM_MESAJI.format(NUM_TARAMA=NUM_TARAMA)},
+            {'role': 'system', 'content': SISTEM_MESAJI},
             {
                 'role': 'user',
-                'content': f"Aşağıda bu fotoğrafın {NUM_TARAMA} bağımsız taraması var:\n\n{taramalar_metni}\n\nBunlara dayanarak nihai analizi JSON olarak üret.",
-                'images': [gorsel_verisi],
+                'content': 'Bu fotoğrafı Türkçe betimle ve etiketle.',
+                'images': [gorsel_veri_hazirla(dosya_yolu)],
             },
         ],
         format='json',
