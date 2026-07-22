@@ -3,7 +3,7 @@ import io
 import json
 import re    # Regex kütüphanesi (JSON Zırhı)
 import ollama
-from PIL import Image
+from PIL import Image, ImageOps
 import pillow_heif
 
 # Ollama sunucusu HEIC/HEIF'i çözemiyor (yalnızca JPEG/PNG/WEBP gibi standart formatları
@@ -23,8 +23,9 @@ NUM_CTX = 4096
 # Makine bu işlem sırasında başka iş için kullanılmıyor, tüm çekirdekler kullanılabilir.
 NUM_THREAD = os.cpu_count() or 4
 
-# Çıktı zaten kısa bir JSON (tek cümlelik betimleme + etiketler) olacağı için sınırlandı.
-NUM_PREDICT = 400
+# Modelin önce görseli ayrıntılı taraması ("gozlemler" alanı), sonra betimleme + etiketleri
+# üretmesi gerektiği için tek cümlelik çıktıya göre daha geniş bir pay bırakıldı.
+NUM_PREDICT = 700
 
 # temperature 0.0 (greedy) modeli deterministik yapar, halüsinasyonu azaltır.
 # repeat_penalty greedy decoding'de oluşabilecek tekrar döngülerine karşı güvenlik payı.
@@ -36,7 +37,6 @@ ORTAK_SECENEKLER = {
 }
 
 DESTEKLENEN_UZANTILAR = (".jpg", ".jpeg", ".png", ".webp", ".bmp", ".heic", ".heif")
-HEIC_UZANTILARI = (".heic", ".heif")
 
 
 # ==========================================
@@ -45,18 +45,34 @@ HEIC_UZANTILARI = (".heic", ".heif")
 SISTEM_MESAJI = """
 Sen profesyonel bir Arşiv Asistanısın. Sana verilen fotoğrafı betimleyeceksin.
 KURAL 1: Çıktındaki her bir kelime KESİNLİKLE TÜRKÇE olmalıdır.
-KURAL 2: Betimleme akıcı, tek bir cümle olmalı; görseldeki ana özneyi, durumunu/eylemini ve öne
-çıkan görsel detayları (renk, konum, ortam) içermeli. Üslup örneği: "Yeşil kanepenin üstünde
-yatan siyah bir kedi".
-KURAL 3: Görselde KESİNLİKLE olmayan hiçbir şeyi UYDURMA. Bir ayrıntıdan emin değilsen yazma.
-KURAL 4: Yoruma girme, "bu görselde şu var" gibi meta cümleler kurma; DOĞRUDAN betimlemeyi yaz.
-KURAL 5: Fotoğrafı en iyi yansıtan en fazla 6 adet TÜRKÇE etiket üret (nesneler, ortam, renk,
-eylem, tür/kategori gibi). Her etiket kısa olmalı (tek kelime veya en fazla 2-3 kelimelik öbek),
+KURAL 2: Önce görseli baştan sona TARA: ön plandaki ve arka plandaki TÜM nesneleri, kişileri/
+hayvanları, renklerini, konumlarını (sağ/sol/üst/alt/ortada), eylemlerini, ortamı ve varsa görünen
+yazıları tek tek fark et; bunları "gozlemler" alanına kısa maddeler halinde yaz. Renkleri GERÇEKTEN
+GÖRDÜĞÜN gibi yaz (bir hayvanın/nesnenin üzerinde birden fazla renk lekesi varsa hepsini say, tek
+bir genel renge indirgeme). Bir nesnenin/canlının alt türünü ya da modelini (ör. bas gitar mı elektro
+gitar mı, kedi ırkı ne) belirtmeden önce bunu destekleyen somut, sayılabilir bir kanıtı (tel sayısı,
+gövde/kafa şekli, ayırt edici desen) gözleminde belirt; böyle bir kanıtın yoksa daha genel ve güvenli
+bir terim kullan (ör. "gitar", "kedi"). Görsel olarak birbirine çok benzeyen alt türler arasında (ör.
+bas gitar / elektro gitar / akustik gitar; kedi / kaplan; farklı köpek ırkları) KESİN ayrım
+yapamıyorsan asla spesifik olanı seçme, üst kategoriyi (ör. sadece "gitar") kullan.
+KURAL 3: "gozlemler" taramana dayanarak akıcı TEK bir cümlelik betimleme üret; ana özneyi,
+durumunu/eylemini ve öne çıkan görsel detayları (renk, konum, ortam) içermeli. Üslup örneği:
+"Yeşil kanepenin üstünde yatan siyah bir kedi". Taramada fark edip ana cümleye sığdıramadığın
+ikincil detayları KAYBETME, KURAL 6 uyarınca etiketlere yansıt.
+KURAL 4: Görselde KESİNLİKLE olmayan hiçbir şeyi UYDURMA. Bir ayrıntıdan (tür, model, tam renk dahil)
+emin değilsen o ayrıntıyı YAZMA veya daha genel bir terimle belirt; net kanıtın olmadığı spesifik bir
+iddiada bulunma.
+KURAL 5: Yoruma girme, "bu görselde şu var" gibi meta cümleler kurma; "aciklama" alanına DOĞRUDAN
+betimlemeyi yaz.
+KURAL 6: Fotoğrafı en iyi yansıtan en fazla 6 adet TÜRKÇE etiket üret (nesneler, ortam, renk,
+eylem, tür/kategori gibi). Taramada fark edip ana cümleye giremeyen önemli nesne/detayları
+öncelikle etiketlere ekle. Her etiket kısa olmalı (tek kelime veya en fazla 2-3 kelimelik öbek),
 tam cümle YAZMA.
-KURAL 6: Aynı anlama gelen etiketi tekrar etme.
+KURAL 7: Aynı anlama gelen etiketi tekrar etme.
 
 Yanıtını KESİNLİKLE SADECE aşağıdaki JSON formatında ver:
 {
+    "gozlemler": "Görseldeki tüm nesne, renk, konum ve eylemlerin kısa maddeler halinde taraması",
     "aciklama": "Görselin KESİNLİKLE TÜRKÇE, tek cümlelik betimlemesi",
     "etiketler": ["etiket1", "etiket2", "etiket3", "etiket4", "etiket5", "etiket6"]
 }
@@ -95,13 +111,14 @@ def etiketleri_normallestir(etiketler):
 # 3. GÖRSEL ANALİZ
 # ==========================================
 def gorsel_veri_hazirla(dosya_yolu):
-    # Ollama'ya HEIC/HEIF gönderilemez; PNG'ye çevirip baytları döndürüyoruz.
-    # Diğer formatlarda dosya yolu doğrudan geçilir (gereksiz yeniden kodlamayı önler).
-    _, uzanti = os.path.splitext(dosya_yolu)
-    if uzanti.lower() not in HEIC_UZANTILARI:
-        return dosya_yolu
-
+    # Ollama'ya dosya yolu doğrudan verilirse ham piksel verisi hiçbir düzeltme yapılmadan
+    # gönderilir. Telefon fotoğraflarının çoğu EXIF "Orientation" etiketiyle döndürülerek
+    # gösterilir (ör. sensör yatay kaydeder, etiket 90° çevirmeyi işaret eder); bu etiket
+    # uygulanmazsa model görseli yan yatmış haliyle "görür" ve tamamen alakasız bir betimleme
+    # üretebilir. Bu yüzden TÜM görseller PIL ile açılıp EXIF'e göre düzeltiliyor ve PNG
+    # baytları olarak gönderiliyor (HEIC/HEIF için PNG'ye çevirmek zaten zorunluydu).
     with Image.open(dosya_yolu) as img:
+        img = ImageOps.exif_transpose(img)
         arabellek = io.BytesIO()
         img.convert("RGB").save(arabellek, format="PNG")
         return arabellek.getvalue()
