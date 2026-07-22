@@ -137,7 +137,7 @@ def gorseli_betimle(dosya_yolu):
         ],
         format='json',
         options={**ORTAK_SECENEKLER, 'num_predict': NUM_PREDICT},
-        keep_alive=0,  # Bu her fotoğraf için son çağrı: bitince modeli bellekten hemen boşalt
+        keep_alive=0,  # Bu her fotoğraf için son çağrı: bitince modeli bellekten hemen boşalt.
     )
 
     try:
