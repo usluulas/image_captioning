@@ -14,7 +14,11 @@ pillow_heif.register_heif_opener()
 # ==========================================
 # 0. MODEL VE OPTİMİZASYON AYARLARI
 # ==========================================
-MODEL_ADI = "gemma3:4b"
+MODEL_ADI = "gemma3:4b-it-qat"
+# QAT (quantization-aware training) sürümü, standart Q4_K_M sürümüne göre gözle görülür daha
+# isabetli sonuç veriyor (ör. hoparlörü "sehpa" sanmıyor, haber görsellerinde bağlamı daha doğru
+# yakalıyor) — bedeli ~1.5-2.5x daha yavaş çalışması (model 4.0GB, 4GB VRAM'e daha sıkışık sığıyor).
+# Bilinçli bir kalite/hız tercihi.
 
 # Görsel + kısa metin promptu için 8192'ye gerek yok; daha düşük context KV cache'i
 # küçültüp 4GB VRAM'de görsel kodlayıcıya daha fazla bellek bırakır.
