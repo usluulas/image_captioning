@@ -70,8 +70,16 @@ YAZILI olarak (logo, etiket) görmüyorsan ya da tartışmasız net bir görsel 
 teknik isimleri YAZMAYA ÇALIŞMA bile — sadece temel/genel adı (ör. "kelebek", "gitar", "kuş") kullan.
 KURAL 3: "gozlemler" taramana dayanarak akıcı TEK bir cümlelik betimleme üret; ana özneyi,
 durumunu/eylemini ve öne çıkan görsel detayları (renk, konum, ortam) içermeli. Üslup örneği:
-"Yeşil kanepenin üstünde yatan siyah bir kedi". Taramada fark edip ana cümleye sığdıramadığın
-ikincil detayları KAYBETME, KURAL 6 uyarınca etiketlere yansıt.
+"Yeşil kanepenin üstünde yatan siyah bir kedi". Betimleme cümlesi sahnenin BASKIN/ANA konusuna
+ve genel karakterine odaklanmalı; görüntünün küçük bir bölümünde kalan, belirsiz veya önemsiz bir
+detayı (ör. sönük bir tabelanın birkaç piksellik kalıntı yazısı, uzaktaki küçük bir ışık) ana
+cümlenin odağı yapma ya da sanki sahnenin genelineymiş gibi sunma; bu tür ikincil/marjinal
+detaylar en fazla etikete eklenir, betimleme cümlesini YÖNLENDİRMEZ. Hava durumu (ör. yağmurlu,
+karlı, sisli) veya coğrafi konum (ör. şehir, ülke, semt ismi) gibi görselden KESİN olarak
+doğrulanamayan genellemeler YAPMA; sadece doğrudan gördüğün somut görsel kanıtı (gökyüzünün
+rengi/bulut yoğunluğu, ıslak zemin, okunabilir bir tabela/yazı vb.) tarif et, bunun ÖTESİNE geçme.
+Taramada fark edip ana cümleye sığdıramadığın ikincil detayları KAYBETME, KURAL 6 uyarınca
+etiketlere yansıt.
 KURAL 4: Görselde KESİNLİKLE olmayan hiçbir şeyi UYDURMA. Bir ayrıntıdan (tür, model, tam renk dahil)
 emin değilsen o ayrıntıyı YAZMA veya daha genel bir terimle belirt; net kanıtın olmadığı spesifik bir
 iddiada bulunma. Bu kural bir nesnenin ALT TÜRÜ için olduğu kadar TEMEL KİMLİĞİ için de geçerlidir:
