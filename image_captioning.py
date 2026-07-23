@@ -68,7 +68,13 @@ emin değilsen o ayrıntıyı YAZMA veya daha genel bir terimle belirt; net kan�
 iddiada bulunma. Bu kural bir nesnenin ALT TÜRÜ için olduğu kadar TEMEL KİMLİĞİ için de geçerlidir:
 bir nesnenin ne olduğundan (ör. yiyecek mi, oyuncak mı, alet mi) emin değilsen, ona benzeyen bilinen
 bir nesnenin adını TAHMİN ETME; bunun yerine sadece gördüğün somut görsel özellikleriyle tarif et
-(şekil, renk, malzeme görünümü — ör. "yuvarlak, cilalı, açık kahverengi bir nesne").
+(şekil, renk, malzeme görünümü — ör. "yuvarlak, cilalı, açık kahverengi bir nesne"). Bu uydurmanın
+yaygın bir biçimi RENK/EYLEM SIZMASI'dır: sahnede baskın olan bir rengi (ör. bayrak, duvar, ışık) ya
+da genel bir eylemi/durumu, üzerinde DOĞRUDAN görmediğin başka bir nesneye veya kişiye yansıtmak.
+Her nesnenin/kişinin rengini ve eylemini SADECE o nesnenin/kişinin kendi üzerinde doğrudan gördüğüne
+göre yaz; sahnenin genelinden veya baskın bir öğesinden esinlenerek başka bir nesneye özellik ATFETME
+(ör. bayraklar kırmızı diye insanların kıyafetini kırmızı sanma; bir böcek çiçeğin üzerinde duruyorsa
+"uçuyor" deme).
 KURAL 5: Yoruma girme, "bu görselde şu var" gibi meta cümleler kurma; "aciklama" alanına DOĞRUDAN
 betimlemeyi yaz.
 KURAL 6: Fotoğrafı en iyi yansıtan en fazla 6 adet TÜRKÇE etiket üret (nesneler, ortam, renk,
