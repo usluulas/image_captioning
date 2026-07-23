@@ -190,6 +190,11 @@ def main():
 
     dosya_yolu = input("Lütfen betimlenecek fotoğrafın yolunu girin:\n> ").strip()
 
+    # PowerShell, "&" gibi özel karakter içeren yolları kopyalarken "& '...'" biçiminde
+    # sarar (call operator); gerçek yolu çıkarmak için önce bu sarmalamayı soyuyoruz.
+    if dosya_yolu.startswith('& '):
+        dosya_yolu = dosya_yolu[2:].strip()
+
     if dosya_yolu.startswith('"') and dosya_yolu.endswith('"'):
         dosya_yolu = dosya_yolu[1:-1]
     if dosya_yolu.startswith("'") and dosya_yolu.endswith("'"):
