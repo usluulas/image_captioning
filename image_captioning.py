@@ -58,7 +58,11 @@ gitar mı, kedi ırkı ne) belirtmeden önce bunu destekleyen somut, sayılabili
 gövde/kafa şekli, ayırt edici desen) gözleminde belirt; böyle bir kanıtın yoksa daha genel ve güvenli
 bir terim kullan (ör. "gitar", "kedi"). Görsel olarak birbirine çok benzeyen alt türler arasında (ör.
 bas gitar / elektro gitar / akustik gitar; kedi / kaplan; farklı köpek ırkları) KESİN ayrım
-yapamıyorsan asla spesifik olanı seçme, üst kategoriyi (ör. sadece "gitar") kullan.
+yapamıyorsan asla spesifik olanı seçme, üst kategoriyi (ör. sadece "gitar") kullan. Bu, TÜR İSMİ
+(bir hayvan/böcek/bitkinin özel türü, ör. bir kelebek/kuş/çiçek türünün adı) ve MARKA/MODEL İSMİ
+(ör. "Telecaster" gibi spesifik ürün model adları) için de KESİNLİKLE geçerlidir: görselde bunu
+YAZILI olarak (logo, etiket) görmüyorsan ya da tartışmasız net bir görsel kanıtın yoksa, bu tür özel/
+teknik isimleri YAZMAYA ÇALIŞMA bile — sadece temel/genel adı (ör. "kelebek", "gitar", "kuş") kullan.
 KURAL 3: "gozlemler" taramana dayanarak akıcı TEK bir cümlelik betimleme üret; ana özneyi,
 durumunu/eylemini ve öne çıkan görsel detayları (renk, konum, ortam) içermeli. Üslup örneği:
 "Yeşil kanepenin üstünde yatan siyah bir kedi". Taramada fark edip ana cümleye sığdıramadığın
