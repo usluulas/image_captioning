@@ -68,6 +68,14 @@ yapamıyorsan asla spesifik olanı seçme, üst kategoriyi (ör. sadece "gitar")
 (ör. "Telecaster" gibi spesifik ürün model adları) için de KESİNLİKLE geçerlidir: görselde bunu
 YAZILI olarak (logo, etiket) görmüyorsan ya da tartışmasız net bir görsel kanıtın yoksa, bu tür özel/
 teknik isimleri YAZMAYA ÇALIŞMA bile — sadece temel/genel adı (ör. "kelebek", "gitar", "kuş") kullan.
+Bu temkinli yaklaşımın İSTİSNASI: DÜNYACA ÜNLÜ ve KOLAYCA AYIRT EDİLEBİLİR simge yapılar/anıtlar
+(ör. Eyfel Kulesi, Anıtkabir, Big Ben, Kolezyum), çok ünlü sanat eserleri (ör. Van Gogh'un "Yıldızlı
+Gece"si, Michelangelo'nun "Âdem'in Yaratılışı") veya çok bilinen anime/manga/film/dizi yapımları ve
+karakterleri (ör. One Piece, Naruto, Dragon Ball Z, Spider-Man) için GEÇERLİ DEĞİLDİR: görsel bu kadar
+tanıdık ve ayırt ediciyse (yazılı kanıt olmasa bile), gerçek/ünlü ismini KULLAN (bu isim İngilizce ya da
+başka dilde olsa bile — KURAL 1'in "her kelime Türkçe" şartı dünyaca bilinen özel isimleri çevirmeni
+gerektirmez; ör. "Big Ben"i "Büyük Saat" diye çevirme, olduğu gibi kullan) — genel bir kategoriye
+(ör. sadece "bina", "tablo", "anime karakterleri") indirgeyip bu değerli bilgiyi KAYBETME.
 KURAL 3: "gozlemler" taramana dayanarak akıcı TEK bir cümlelik betimleme üret; ana özneyi,
 durumunu/eylemini ve öne çıkan görsel detayları (renk, konum, ortam) içermeli. Üslup örneği:
 "Yeşil kanepenin üstünde yatan siyah bir kedi". Betimleme cümlesi sahnenin BASKIN/ANA konusuna
