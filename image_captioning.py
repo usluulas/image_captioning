@@ -46,72 +46,46 @@ DESTEKLENEN_UZANTILAR = (".jpg", ".jpeg", ".png", ".webp", ".bmp", ".heic", ".he
 # ==========================================
 # 1. PROMPT ŞABLONU
 # ==========================================
+# NOT: Bu prompt oturum boyunca kural kural büyümüştü (847 kelimeye çıkmıştı) ve bir noktada
+# 4GB VRAM'deki hesaplama/bellek baskısı üretimi yarıda kestiriyordu (anitkabir.jpg'de done=False).
+# Aynı kuralları koruyup daha yoğun/derli toplu (~430 kelime) yeniden yazınca hem çökme ortadan
+# kalktı hem de birkaç vaka (isim tanıma, OCR, renk) daha iyi çalıştı. Regresyon testi: kelebek,
+# gitar, renk/eylem/bağlamsal sızma, OCR, oran/hava durumu, ikonik isim vakalarının hepsi korundu.
 SISTEM_MESAJI = """
 Sen profesyonel bir Arşiv Asistanısın. Sana verilen fotoğrafı betimleyeceksin.
-KURAL 1: Çıktındaki her bir kelime KESİNLİKLE TÜRKÇE olmalıdır.
-KURAL 2: Önce görseli baştan sona TARA: ön plandaki ve arka plandaki TÜM nesneleri, kişileri/
-hayvanları, renklerini, konumlarını (sağ/sol/üst/alt/ortada), eylemlerini, ortamı ve varsa görünen
-yazıları tek tek fark et; bunları "gozlemler" alanına kısa maddeler halinde yaz. GÖRSELDE YAZILI bir
-metin/başlık/tabela/logo varsa bunu OLDUĞU GİBİ, orijinal diliyle ve yazımıyla alıntıla — ÇEVİRMEYE
-veya Türkçeleştirmeye ÇALIŞMA (KURAL 1'deki "her kelime Türkçe" şartı SENİN kurduğun betimleme/yorum
-cümleleri içindir, görselden birebir okuduğun yazı buna dahil değildir). Metni net okuyamıyorsan
-(bulanık, kısmen görünür, küçük punto) o metni TAHMİN EDEREK yazma; sadece görselde yazı/tabela
-bulunduğunu belirt, içeriğini UYDURMA. Renkleri GERÇEKTEN
-GÖRDÜĞÜN gibi yaz (bir hayvanın/nesnenin üzerinde birden fazla renk lekesi varsa hepsini say, tek
-bir genel renge indirgeme). Bir nesnenin/canlının alt türünü ya da modelini (ör. bas gitar mı elektro
-gitar mı, kedi ırkı ne) belirtmeden önce bunu destekleyen somut, sayılabilir bir kanıtı (tel sayısı,
-gövde/kafa şekli, ayırt edici desen) gözleminde belirt; böyle bir kanıtın yoksa daha genel ve güvenli
-bir terim kullan (ör. "gitar", "kedi"). Görsel olarak birbirine çok benzeyen alt türler arasında (ör.
-bas gitar / elektro gitar / akustik gitar; kedi / kaplan; farklı köpek ırkları) KESİN ayrım
-yapamıyorsan asla spesifik olanı seçme, üst kategoriyi (ör. sadece "gitar") kullan. Bu, TÜR İSMİ
-(bir hayvan/böcek/bitkinin özel türü, ör. bir kelebek/kuş/çiçek türünün adı) ve MARKA/MODEL İSMİ
-(ör. "Telecaster" gibi spesifik ürün model adları) için de KESİNLİKLE geçerlidir: görselde bunu
-YAZILI olarak (logo, etiket) görmüyorsan ya da tartışmasız net bir görsel kanıtın yoksa, bu tür özel/
-teknik isimleri YAZMAYA ÇALIŞMA bile — sadece temel/genel adı (ör. "kelebek", "gitar", "kuş") kullan.
-Bu temkinli yaklaşımın İSTİSNASI: DÜNYACA ÜNLÜ ve KOLAYCA AYIRT EDİLEBİLİR simge yapılar/anıtlar
-(ör. Eyfel Kulesi, Anıtkabir, Big Ben, Kolezyum), çok ünlü sanat eserleri (ör. Van Gogh'un "Yıldızlı
-Gece"si, Michelangelo'nun "Âdem'in Yaratılışı") veya çok bilinen anime/manga/film/dizi yapımları ve
-karakterleri (ör. One Piece, Naruto, Dragon Ball Z, Spider-Man) için GEÇERLİ DEĞİLDİR: görsel bu kadar
-tanıdık ve ayırt ediciyse (yazılı kanıt olmasa bile), gerçek/ünlü ismini KULLAN (bu isim İngilizce ya da
-başka dilde olsa bile — KURAL 1'in "her kelime Türkçe" şartı dünyaca bilinen özel isimleri çevirmeni
-gerektirmez; ör. "Big Ben"i "Büyük Saat" diye çevirme, olduğu gibi kullan) — genel bir kategoriye
-(ör. sadece "bina", "tablo", "anime karakterleri") indirgeyip bu değerli bilgiyi KAYBETME.
-KURAL 3: "gozlemler" taramana dayanarak akıcı TEK bir cümlelik betimleme üret; ana özneyi,
-durumunu/eylemini ve öne çıkan görsel detayları (renk, konum, ortam) içermeli. Üslup örneği:
-"Yeşil kanepenin üstünde yatan siyah bir kedi". Betimleme cümlesi sahnenin BASKIN/ANA konusuna
-ve genel karakterine odaklanmalı; görüntünün küçük bir bölümünde kalan, belirsiz veya önemsiz bir
-detayı (ör. sönük bir tabelanın birkaç piksellik kalıntı yazısı, uzaktaki küçük bir ışık) ana
-cümlenin odağı yapma ya da sanki sahnenin genelineymiş gibi sunma; bu tür ikincil/marjinal
-detaylar en fazla etikete eklenir, betimleme cümlesini YÖNLENDİRMEZ. Hava durumu (ör. yağmurlu,
-karlı, sisli) veya coğrafi konum (ör. şehir, ülke, semt ismi) gibi görselden KESİN olarak
-doğrulanamayan genellemeler YAPMA; sadece doğrudan gördüğün somut görsel kanıtı (gökyüzünün
-rengi/bulut yoğunluğu, ıslak zemin, okunabilir bir tabela/yazı vb.) tarif et, bunun ÖTESİNE geçme.
-Taramada fark edip ana cümleye sığdıramadığın ikincil detayları KAYBETME, KURAL 6 uyarınca
-etiketlere yansıt.
-KURAL 4: Görselde KESİNLİKLE olmayan hiçbir şeyi UYDURMA. Bir ayrıntıdan (tür, model, tam renk dahil)
-emin değilsen o ayrıntıyı YAZMA veya daha genel bir terimle belirt; net kanıtın olmadığı spesifik bir
-iddiada bulunma. Bu kural bir nesnenin ALT TÜRÜ için olduğu kadar TEMEL KİMLİĞİ için de geçerlidir:
-bir nesnenin ne olduğundan (ör. yiyecek mi, oyuncak mı, alet mi) emin değilsen, ona benzeyen bilinen
-bir nesnenin adını TAHMİN ETME; bunun yerine sadece gördüğün somut görsel özellikleriyle tarif et
-(şekil, renk, malzeme görünümü — ör. "yuvarlak, cilalı, açık kahverengi bir nesne"). Bu uydurmanın
-yaygın bir biçimi RENK/EYLEM SIZMASI'dır: sahnede baskın olan bir rengi (ör. bayrak, duvar, ışık) ya
-da genel bir eylemi/durumu, üzerinde DOĞRUDAN görmediğin başka bir nesneye veya kişiye yansıtmak.
-Her nesnenin/kişinin rengini ve eylemini SADECE o nesnenin/kişinin kendi üzerinde doğrudan gördüğüne
-göre yaz; sahnenin genelinden veya baskın bir öğesinden esinlenerek başka bir nesneye özellik ATFETME
-(ör. bayraklar kırmızı diye insanların kıyafetini kırmızı sanma; bir böcek çiçeğin üzerinde duruyorsa
-"uçuyor" deme). Bu uydurmanın bir başka biçimi BAĞLAMSAL/İLİŞKİSEL SIZMADIR: bir karakter/nesne
-genelde başka karakterlerle/nesnelerle birlikte görülüyor diye (ör. Iron Man genelde Avengers
-ekibiyle, bir gelin genelde bir damatla birlikte görülür) bu diğer karakterleri/nesneleri BU
-SPESİFİK GÖRSELDE GERÇEKTEN GÖRMEDEN varmış gibi EKLEME. SADECE bu görselde GERÇEKTEN görebildiğin
-kişileri/nesneleri say; genel bilgi veya alışılmış örüntüden gelen bir tahmini asla gerçek bir
-gözlem gibi sunma.
-KURAL 5: Yoruma girme, "bu görselde şu var" gibi meta cümleler kurma; "aciklama" alanına DOĞRUDAN
-betimlemeyi yaz.
-KURAL 6: Fotoğrafı en iyi yansıtan en fazla 6 adet TÜRKÇE etiket üret (nesneler, ortam, renk,
-eylem, tür/kategori gibi). Taramada fark edip ana cümleye giremeyen önemli nesne/detayları
-öncelikle etiketlere ekle. Her etiket kısa olmalı (tek kelime veya en fazla 2-3 kelimelik öbek),
-tam cümle YAZMA.
-KURAL 7: Aynı anlama gelen etiketi tekrar etme.
+
+KURAL 1 (DİL): Çıktındaki her kelime KESİNLİKLE TÜRKÇE olmalı — TEK İSTİSNA: görselde YAZILI bir
+metin/başlık/logo görürsen bunu OLDUĞU GİBİ (orijinal dilinde) alıntıla, çevirme. Net okuyamadığın
+yazıyı TAHMİN ETME, sadece "yazı var" de.
+
+KURAL 2 (TARAMA): Görseli baştan sona tara — ön/arka plandaki TÜM nesneleri, kişileri/hayvanları,
+GERÇEKTEN GÖRDÜĞÜN renkleri (birden fazla renk varsa hepsini say), konumları, eylemleri, ortamı,
+yazıları — "gozlemler" alanına kısa maddeler halinde yaz.
+
+KURAL 3 (ÖZEL İSİMLER): Bir nesnenin/canlının alt türünü, markasını/modelini ya da bir türün özel
+adını (ör. bas mı elektro gitar mı, kelebek türü, "Telecaster") YALNIZCA somut kanıtın (tel sayısı,
+ayırt edici desen, yazılı logo) varsa yaz; yoksa üst kategoriyi kullan (ör. "gitar", "kelebek").
+İSTİSNA: DÜNYACA ÜNLÜ, kolay ayırt edilebilir landmark/anıt (Eyfel Kulesi, Anıtkabir, Big Ben,
+Kolezyum), ünlü sanat eserleri (Van Gogh'un "Yıldızlı Gece"si) veya çok bilinen anime/film yapımları
+(One Piece, Naruto, Spider-Man) için bu temkin GEÇERLİ DEĞİL — görsel tanıdıksa gerçek ismini KULLAN
+(İngilizce olsa bile, çevirme).
+
+KURAL 4 (UYDURMA): Görselde KESİNLİKLE olmayanı YAZMA. Emin olmadığın bir ayrıntıyı (tür, renk, ne
+olduğu) ya yazma ya da somut görsel özellikleriyle (şekil, renk, malzeme) tarif et, bilinen bir
+nesneye benzeterek TAHMİN ETME. Üç yaygın uydurma biçimine dikkat: (a) RENK/EYLEM SIZMASI — sahnede
+baskın bir rengi/eylemi (bayrak kırmızısı, vb.) ilgisiz bir nesneye/kişiye yansıtma; (b) BAĞLAMSAL
+SIZMA — bir karakter/nesne genelde başkalarıyla görülüyor diye (Iron Man→Avengers) o SPESİFİK
+görselde olmayan başkalarını ekleme; (c) HAVA DURUMU/KONUM — gökyüzü rengi/bulut gibi somut kanıtın
+ötesine geçip "yağmurlu", şehir/ülke ismi gibi doğrulanamaz genellemeler yapma.
+
+KURAL 5 (CÜMLE): "gozlemler"e dayanarak akıcı TEK cümlelik betimleme üret; ana özneyi, eylemini, öne
+çıkan detayları (renk, konum, ortam) içermeli — "Yeşil kanepenin üstünde yatan siyah bir kedi" gibi.
+Sahnenin BASKIN konusuna odaklan; küçük/önemsiz bir detayı (sönük bir tabelanın kalıntı pikselleri
+gibi) ana cümlenin odağı yapma, en fazla etikete ekle. Yoruma girme, "bu görselde şu var" deme,
+doğrudan betimlemeyi yaz.
+
+KURAL 6 (ETİKET): En fazla 6 TÜRKÇE etiket üret (nesneler, ortam, renk, eylem, tür). Ana cümleye
+sığmayan önemli detayları etikete ekle. Kısa tut (1-3 kelime), tam cümle yazma, tekrar etme.
 
 Yanıtını KESİNLİKLE SADECE aşağıdaki JSON formatında ver:
 {
@@ -167,21 +141,31 @@ def gorsel_veri_hazirla(dosya_yolu):
         return arabellek.getvalue()
 
 
-def gorseli_betimle(dosya_yolu):
-    response = ollama.chat(
+def _model_cagir(gorsel_verisi):
+    return ollama.chat(
         model=MODEL_ADI,
         messages=[
             {'role': 'system', 'content': SISTEM_MESAJI},
             {
                 'role': 'user',
                 'content': 'Bu fotoğrafı Türkçe betimle ve etiketle.',
-                'images': [gorsel_veri_hazirla(dosya_yolu)],
+                'images': [gorsel_verisi],
             },
         ],
         format='json',
         options={**ORTAK_SECENEKLER, 'num_predict': NUM_PREDICT},
         keep_alive=0,  # Bu her fotoğraf için son çağrı: bitince modeli bellekten hemen boşalt.
     )
+
+
+def gorseli_betimle(dosya_yolu):
+    gorsel_verisi = gorsel_veri_hazirla(dosya_yolu)
+    response = _model_cagir(gorsel_verisi)
+
+    # 4GB VRAM'de GPU zaman zaman üretimi ortada kesebiliyor (Ollama watchdog timeout);
+    # bu durumda yanıt 'done=False' ve JSON yarım gelir. Bir kez otomatik yeniden dene.
+    if not response.get('done'):
+        response = _model_cagir(gorsel_verisi)
 
     try:
         data = guvenli_json_ayikla(response['message']['content'])
