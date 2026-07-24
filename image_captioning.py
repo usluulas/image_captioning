@@ -99,7 +99,12 @@ da genel bir eylemi/durumu, üzerinde DOĞRUDAN görmediğin başka bir nesneye 
 Her nesnenin/kişinin rengini ve eylemini SADECE o nesnenin/kişinin kendi üzerinde doğrudan gördüğüne
 göre yaz; sahnenin genelinden veya baskın bir öğesinden esinlenerek başka bir nesneye özellik ATFETME
 (ör. bayraklar kırmızı diye insanların kıyafetini kırmızı sanma; bir böcek çiçeğin üzerinde duruyorsa
-"uçuyor" deme).
+"uçuyor" deme). Bu uydurmanın bir başka biçimi BAĞLAMSAL/İLİŞKİSEL SIZMADIR: bir karakter/nesne
+genelde başka karakterlerle/nesnelerle birlikte görülüyor diye (ör. Iron Man genelde Avengers
+ekibiyle, bir gelin genelde bir damatla birlikte görülür) bu diğer karakterleri/nesneleri BU
+SPESİFİK GÖRSELDE GERÇEKTEN GÖRMEDEN varmış gibi EKLEME. SADECE bu görselde GERÇEKTEN görebildiğin
+kişileri/nesneleri say; genel bilgi veya alışılmış örüntüden gelen bir tahmini asla gerçek bir
+gözlem gibi sunma.
 KURAL 5: Yoruma girme, "bu görselde şu var" gibi meta cümleler kurma; "aciklama" alanına DOĞRUDAN
 betimlemeyi yaz.
 KURAL 6: Fotoğrafı en iyi yansıtan en fazla 6 adet TÜRKÇE etiket üret (nesneler, ortam, renk,
