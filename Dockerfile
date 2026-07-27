@@ -14,3 +14,4 @@ RUN chmod +x entrypoint.sh
 # entrypoint.sh önce Ollama sunucusunu bekler ve model yoksa indirir, sonra CMD'yi çalıştırır.
 ENTRYPOINT ["./entrypoint.sh"]
 CMD ["python", "image_captioning.py"]
+

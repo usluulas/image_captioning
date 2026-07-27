@@ -156,7 +156,7 @@ def _model_cagir(gorsel_verisi):
         ],
         format='json',
         options={**ORTAK_SECENEKLER, 'num_predict': NUM_PREDICT},
-        keep_alive=0,  # Bu her fotoğraf için son çağrı: bitince modeli bellekten hemen boşalt.
+        keep_alive=0,  # Bu her fotoğraf için son çağrı:  bitince modeli bellekten hemen boşalt.
     )
 
 

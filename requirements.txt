@@ -1,3 +1,4 @@
 ollama==0.6.2
 Pillow==12.3.0
 pillow-heif==1.4.0
+

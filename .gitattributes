@@ -2,3 +2,4 @@
 # "exec format error" verir. Bu yuzden LF zorunlu tutuluyor.
 *.sh text eol=lf
 Dockerfile text eol=lf
+ 

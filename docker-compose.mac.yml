@@ -1,5 +1,5 @@
 # macOS (Apple Silicon) icin. Bu dosya bir "override" DEGIL, tek basina kullanilan
-# alternatif bir yapilandirmadir:
+# alternatif bir yapilandirmadir 
 #
 #   docker compose -f docker-compose.mac.yml run --rm betimleyici
 #
@@ -35,3 +35,4 @@ services:
       - ./gorseller:/gorseller:ro
     stdin_open: true
     tty: true
+    
