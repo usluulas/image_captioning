@@ -4,6 +4,26 @@ Bir fotoğrafı yerel bir görsel-dil modeliyle (Ollama üzerinde `gemma3:4b-it-
 Türkçe tek cümlelik betimleme ve etiketler üreten terminal uygulaması.
 
 ---
+## Docker olmadan çalıştırma
+
+1. [Ollama](https://ollama.com/download)'yı kurun.
+2. Modeli indirin: `ollama pull gemma3:4b-it-qat`
+3. Bağımlılıkları kurun: `pip install -r requirements.txt`
+4. Çalıştırın: `python image_captioning.py`
+
+---
+
+## Dosyalar
+
+| Dosya | Görevi |
+|---|---|
+| `image_captioning.py` | Uygulamanın tamamı: prompt, görsel hazırlama, model çağrısı, terminal arayüzü |
+| `requirements.txt` | Python bağımlılıkları (sürümler sabitlenmiştir) |
+| `Dockerfile` | Python ortamının tarifi |
+| `entrypoint.sh` | Container açılışında Ollama'yı bekler, model yoksa indirir |
+| `docker-compose.yml` | Ollama sunucusu + uygulama container'ını birlikte ayağa kaldırır |
+| `docker-compose.gpu.yml` | NVIDIA GPU kullanımı için ek ayar dosyası |
+| `docker-compose.mac.yml` | macOS'ta Mac'e kurulu Ollama'ya bağlanan alternatif yapılandırma |
 
 ## Docker ile çalıştırma (önerilen — hiçbir şey kurmanız gerekmez)
 
@@ -103,23 +123,3 @@ vermez.
 
 ---
 
-## Docker olmadan çalıştırma
-
-1. [Ollama](https://ollama.com/download)'yı kurun.
-2. Modeli indirin: `ollama pull gemma3:4b-it-qat`
-3. Bağımlılıkları kurun: `pip install -r requirements.txt`
-4. Çalıştırın: `python image_captioning.py`
-
----
-
-## Dosyalar
-
-| Dosya | Görevi |
-|---|---|
-| `image_captioning.py` | Uygulamanın tamamı: prompt, görsel hazırlama, model çağrısı, terminal arayüzü |
-| `requirements.txt` | Python bağımlılıkları (sürümler sabitlenmiştir) |
-| `Dockerfile` | Python ortamının tarifi |
-| `entrypoint.sh` | Container açılışında Ollama'yı bekler, model yoksa indirir |
-| `docker-compose.yml` | Ollama sunucusu + uygulama container'ını birlikte ayağa kaldırır |
-| `docker-compose.gpu.yml` | NVIDIA GPU kullanımı için ek ayar dosyası |
-| `docker-compose.mac.yml` | macOS'ta Mac'e kurulu Ollama'ya bağlanan alternatif yapılandırma |
