@@ -1,0 +1,8 @@
+.git
+.gitignore
+__pycache__/
+*.pyc
+gorseller/
+README.md
+docker-compose*.yml
+
