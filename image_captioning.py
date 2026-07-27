@@ -14,7 +14,9 @@ pillow_heif.register_heif_opener()
 # ==========================================
 # 0. MODEL VE OPTİMİZASYON AYARLARI
 # ==========================================
-MODEL_ADI = "gemma3:4b-it-qat"
+# Docker'da entrypoint.sh aynı değişkeni okuyup modeli indiriyor; ikisinin ayrışmaması için
+# model adı ortam değişkeninden alınabiliyor. Docker dışında varsayılan aynen geçerli.
+MODEL_ADI = os.environ.get("MODEL_ADI", "gemma3:4b-it-qat")
 # QAT (quantization-aware training) sürümü, standart Q4_K_M sürümüne göre gözle görülür daha
 # isabetli sonuç veriyor (ör. hoparlörü "sehpa" sanmıyor, haber görsellerinde bağlamı daha doğru
 # yakalıyor) — bedeli ~1.5-2.5x daha yavaş çalışması (model 4.0GB, 4GB VRAM'e daha sıkışık sığıyor).

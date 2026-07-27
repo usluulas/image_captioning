@@ -1,0 +1,35 @@
+services:
+  # 1. Modeli calistiran sunucu. Kendi bilgisayarinizdaki "Ollama" uygulamasinin container hali.
+  ollama:
+    # Sizin makinenizdeki Ollama surumune sabitlendi (ollama --version -> 0.32.3).
+    # Bu etiket cekilemezse "ollama/ollama:latest" ile degistirin.
+    image: ollama/ollama:0.32.3
+    volumes:
+      # Indirilen model kalici olarak burada durur; container silinse bile 4 GB tekrar inmez.
+      - ollama-modelleri:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+    restart: unless-stopped
+
+  # 2. Python programi.
+  betimleyici:
+    build: .
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      # ollama kutuphanesi bu degiskeni otomatik okur; boylece localhost yerine
+      # yandaki container'a baglanir. Kodda degisiklik gerekmez.
+      OLLAMA_HOST: http://ollama:11434
+      MODEL_ADI: gemma3:4b-it-qat
+    volumes:
+      # Bilgisayardaki gorseller/ klasoru, container icinde /gorseller olarak gorunur.
+      - ./gorseller:/gorseller:ro
+    stdin_open: true
+    tty: true
+
+volumes:
+  ollama-modelleri:

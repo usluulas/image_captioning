@@ -1,0 +1,37 @@
+# macOS (Apple Silicon) icin. Bu dosya bir "override" DEGIL, tek basina kullanilan
+# alternatif bir yapilandirmadir:
+#
+#   docker compose -f docker-compose.mac.yml run --rm betimleyici
+#
+# NEDEN AYRI BIR DOSYA?
+# Docker, macOS'ta kodu bir Linux sanal makinesinde calistirir ve Apple Silicon'in
+# GPU'su (Metal) o sanal makineye aktarilamaz. Bu yuzden normal docker-compose.yml
+# kullanilirsa Ollama container icinde SADECE CPU ile calisir ve fotograf basina
+# birkac dakika surer.
+#
+# Bu dosya Ollama'yi container icinde calistirmaz; Mac'e normal uygulama olarak
+# kurulmus Ollama'ya baglanir. Boylece model Metal/GPU uzerinde calisir (cok daha
+# hizli), Python tarafi yine container icinde izole kalir.
+#
+# ON KOSUL 1: Ollama https://ollama.com/download adresinden Mac'e kurulmus ve
+#             calisiyor olmali.
+# ON KOSUL 2: Ollama varsayilan olarak yalnizca 127.0.0.1'i dinler; container'dan
+#             gelen baglantiyi kabul etmesi icin tum arayuzleri dinlemesi gerekir.
+#             Terminalde bir kez:
+#                 launchctl setenv OLLAMA_HOST "0.0.0.0:11434"
+#             ardindan Ollama uygulamasini kapatip yeniden acin.
+
+services:
+  betimleyici:
+    build: .
+    environment:
+      # host.docker.internal = container icinden Mac'in kendisi.
+      OLLAMA_HOST: http://host.docker.internal:11434
+      MODEL_ADI: gemma3:4b-it-qat
+    extra_hosts:
+      # Docker Desktop bu adi zaten saglar; satir Linux'ta da calissin diye duruyor.
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./gorseller:/gorseller:ro
+    stdin_open: true
+    tty: true
