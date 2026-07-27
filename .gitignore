@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+
+# Test fotograflari repoya girmesin, klasorun kendisi kalsin.
+gorseller/*
+!gorseller/.gitkeep
+ 
