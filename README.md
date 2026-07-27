@@ -11,6 +11,27 @@ Türkçe tek cümlelik betimleme ve etiketler üreten terminal uygulaması.
 3. Bağımlılıkları kurun: `pip install -r requirements.txt`
 4. Çalıştırın: `python image_captioning.py`
 
+### Gereken kütüphaneler
+
+3. adımdaki komut aşağıdakilerin tamamını kurar; tek tek kurmak isterseniz sürümler
+`requirements.txt` içinde sabitlenmiştir.
+
+| Kütüphane | Sürüm | Ne işe yarar |
+|---|---|---|
+| `ollama` | 0.6.2 | Ollama sunucusuna görseli ve promptu gönderen Python istemcisi |
+| `Pillow` | 12.3.0 | Görseli açar, EXIF'e göre döndürmeyi düzeltir, PNG baytlarına çevirir |
+| `pillow-heif` | 1.4.0 | iPhone'un `.heic`/`.heif` formatını Pillow'a tanıtır |
+
+Tek komutla:
+
+```bash
+pip install ollama==0.6.2 Pillow==12.3.0 pillow-heif==1.4.0
+```
+
+Bunlar yalnızca Python bağımlılıklarıdır; **Ollama'nın kendisi ayrı bir programdır** (1. adım) ve
+`pip` ile kurulmaz. Docker ile çalıştırıyorsanız bu adımların hiçbirini yapmanıza gerek yoktur —
+imaj bunları kendisi kurar.
+
 ---
 
 ## Dosyalar
