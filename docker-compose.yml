@@ -25,11 +25,16 @@ services:
       # yandaki container'a baglanir. Kodda degisiklik gerekmez.
       OLLAMA_HOST: http://ollama:11434
       MODEL_ADI: gemma3:4b-it-qat
+      # Arayuz container icinde 127.0.0.1'i dinlerse disaridan erisilemez; 0.0.0.0 sart.
+      ARAYUZ_HOST: 0.0.0.0
+    ports:
+      # Tarayicidan http://localhost:7860 adresiyle acilir. Bastaki 127.0.0.1 onemli:
+      # portu yalnizca bu bilgisayara acar, ayni agdaki diger cihazlar erisemez.
+      - "127.0.0.1:7860:7860"
     volumes:
       # Bilgisayardaki gorseller/ klasoru, container icinde /gorseller olarak gorunur.
+      # Arayuzden yuklenen dosyalar buraya degil, container icindeki gecici klasore gider.
       - ./gorseller:/gorseller:ro
-    stdin_open: true
-    tty: true
 
 volumes:
   ollama-modelleri:

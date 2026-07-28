@@ -1,7 +1,7 @@
 # macOS (Apple Silicon) icin. Bu dosya bir "override" DEGIL, tek basina kullanilan
 # alternatif bir yapilandirmadir 
 #
-#   docker compose -f docker-compose.mac.yml run --rm betimleyici
+#   docker compose -f docker-compose.mac.yml up
 #
 # NEDEN AYRI BIR DOSYA?
 # Docker, macOS'ta kodu bir Linux sanal makinesinde calistirir ve Apple Silicon'in
@@ -28,11 +28,15 @@ services:
       # host.docker.internal = container icinden Mac'in kendisi.
       OLLAMA_HOST: http://host.docker.internal:11434
       MODEL_ADI: gemma3:4b-it-qat
+      # Arayuz container icinde 127.0.0.1'i dinlerse disaridan erisilemez; 0.0.0.0 sart.
+      ARAYUZ_HOST: 0.0.0.0
+    ports:
+      # Tarayicidan http://localhost:7860 adresiyle acilir. Bastaki 127.0.0.1 onemli:
+      # portu yalnizca bu bilgisayara acar, ayni agdaki diger cihazlar erisemez.
+      - "127.0.0.1:7860:7860"
     extra_hosts:
       # Docker Desktop bu adi zaten saglar; satir Linux'ta da calissin diye duruyor.
       - "host.docker.internal:host-gateway"
     volumes:
       - ./gorseller:/gorseller:ro
-    stdin_open: true
-    tty: true
     

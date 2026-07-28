@@ -1,5 +1,5 @@
 # NVIDIA ekran karti olan makinelerde ek dosya olarak kullanilir:
-#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml run --rm betimleyici
+#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml up
 # Ekran karti yoksa BU DOSYAYI KULLANMAYIN; program CPU'da (daha yavas) calisir.
 services:
   ollama:
