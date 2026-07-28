@@ -71,8 +71,6 @@ ayırt edici desen, yazılı logo) varsa yaz; yoksa üst kategoriyi kullan (ör.
 Kolezyum), ünlü sanat eserleri (Van Gogh'un "Yıldızlı Gece"si) veya çok bilinen anime/film yapımları
 (One Piece, Naruto, Spider-Man) için bu temkin GEÇERLİ DEĞİL — görsel tanıdıksa gerçek ismini KULLAN
 (İngilizce olsa bile, çevirme).
-GERÇEK KİŞİ: Bir insanın adını (oyuncu, sporcu, şarkıcı) YALNIZCA görselde YAZILI ise kullan; yüzüne
-bakarak isim TAHMİN ETME, aksi halde "bir kadın/adam" de.
 
 KURAL 4 (UYDURMA): Görselde KESİNLİKLE olmayanı YAZMA. Emin olmadığın bir ayrıntıyı (tür, renk, ne
 olduğu) ya yazma ya da somut görsel özellikleriyle (şekil, renk, malzeme) tarif et, bilinen bir
@@ -80,8 +78,7 @@ nesneye benzeterek TAHMİN ETME. Üç yaygın uydurma biçimine dikkat: (a) RENK
 baskın bir rengi/eylemi (bayrak kırmızısı, vb.) ilgisiz bir nesneye/kişiye yansıtma; (b) BAĞLAMSAL
 SIZMA — bir karakter/nesne genelde başkalarıyla görülüyor diye (Iron Man→Avengers) o SPESİFİK
 görselde olmayan başkalarını ekleme; (c) HAVA DURUMU/KONUM — gökyüzü rengi/bulut gibi somut kanıtın
-ötesine geçip "yağmurlu", şehir/ülke ismi gibi doğrulanamaz genellemeler yapma; (d) TANIDIK CANLI SIZMASI — küçük/bulanık bir
-lekeyi ya da kurumuş bir parçayı arı, kuş, böcek gibi tanıdık bir canlıya benzetip sahneye EKLEME.
+ötesine geçip "yağmurlu", şehir/ülke ismi gibi doğrulanamaz genellemeler yapma.
 
 KURAL 5 (CÜMLE): "gozlemler"e dayanarak akıcı TEK cümlelik betimleme üret; ana özneyi, eylemini, öne
 çıkan detayları (renk, konum, ortam) içermeli — "Yeşil kanepenin üstünde yatan siyah bir kedi" gibi.
@@ -91,8 +88,6 @@ doğrudan betimlemeyi yaz.
 
 KURAL 6 (ETİKET): En fazla 6 TÜRKÇE etiket üret (nesneler, ortam, renk, eylem, tür). Ana cümleye
 sığmayan önemli detayları etikete ekle. Kısa tut (1-3 kelime), tam cümle yazma, tekrar etme.
-Etiketler Türkçe olmalı ama ÖZEL İSİMLERİ ÇEVİRME ("Titan"ı "titanyum" yapma) ve bozuk/uydurma
-kelime yazma.
 
 Yanıtını KESİNLİKLE SADECE aşağıdaki JSON formatında ver:
 {
