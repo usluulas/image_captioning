@@ -9,6 +9,8 @@ otomatik geçerli oluyor.
 """
 
 import os
+import threading
+import time
 
 # Gradio varsayılan olarak kendi sunucusuna kullanım istatistiği ve sürüm kontrolü gönderir.
 # Bu satır import'tan ÖNCE gelmeli, yoksa kütüphane değeri okumadan kurulur. Program tamamen
@@ -30,6 +32,12 @@ SUNUCU_ADRESI = os.environ.get("ARAYUZ_HOST", "127.0.0.1")
 SUNUCU_PORTU = int(os.environ.get("ARAYUZ_PORT", "7860"))
 YEREL_CALISMA = SUNUCU_ADRESI not in ("0.0.0.0", "::")
 
+# İlerleme çubuğu için tahmini süre. Ollama tek bloklayıcı çağrı döndürüyor, gerçek yüzde
+# bilgisi vermiyor; bu yüzden çubuk GEÇEN SÜREYE dayanıyor ve arayüzde "tahmini" diye
+# belirtiliyor. Değer bu makinede ölçüldü (temiz koşulda 71-92 sn); ortam değişkeniyle
+# değiştirilebilir, çünkü CPU-only makinelerde süre birkaç dakikayı bulabiliyor.
+TAHMINI_SURE_SN = int(os.environ.get("TAHMINI_SURE_SN", "85"))
+
 ACIKLAMA_METNI = f"""
 Fotoğrafı aşağıdaki alana sürükleyin, ardından **Betimle** düğmesine basın.
 Desteklenen formatlar: {', '.join(u.lstrip('.') for u in DESTEKLENEN_UZANTILAR)}.
@@ -39,7 +47,7 @@ olmadan birkaç dakika sürer. Bu normaldir, sayfayı yenilemeyin.
 """
 
 
-def betimle(dosya_yolu):
+def betimle(dosya_yolu, progress=gr.Progress()):
     """Yüklenen görseli modele gönderir; (betimleme, etiketler, durum) döndürür."""
     if not dosya_yolu:
         return "", "", "Önce bir görsel yükleyin."
@@ -48,19 +56,45 @@ def betimle(dosya_yolu):
     if uzanti not in DESTEKLENEN_UZANTILAR:
         return "", "", f"Desteklenmeyen dosya biçimi: {uzanti or 'bilinmiyor'}"
 
-    try:
-        sonuc = gorseli_betimle_yapisal(dosya_yolu)
-    except Exception as e:
+    # Model çağrısı bloklayıcı ve ara bilgi vermiyor; ayrı bir iş parçacığında çalıştırıp
+    # burada geçen süreyi sayarak çubuğu ilerletiyoruz.
+    kutu = {}
+
+    def calistir():
+        try:
+            kutu["sonuc"] = gorseli_betimle_yapisal(dosya_yolu)
+        except Exception as e:  # noqa: BLE001 - hata mesajı kullanıcıya gösterilecek
+            kutu["istisna"] = e
+
+    isci = threading.Thread(target=calistir, daemon=True)
+    baslangic = time.time()
+    isci.start()
+
+    while isci.is_alive():
+        gecen = int(time.time() - baslangic)
+        if gecen < TAHMINI_SURE_SN:
+            # Çubuk %99'da bekletiliyor; tahmin tutmazsa %100 gösterip yanıltmayalım.
+            oran = min(gecen / TAHMINI_SURE_SN, 0.99)
+            progress(oran, desc=f"Analiz ediliyor: {gecen} sn / ~{TAHMINI_SURE_SN} sn (tahmini)")
+        else:
+            progress(0.99, desc=f"Tahminden uzun sürüyor, devam ediyor: {gecen} sn")
+        time.sleep(0.5)
+
+    isci.join()
+    gecen = round(time.time() - baslangic)
+
+    if "istisna" in kutu:
         # En sık sebep: Ollama sunucusu çalışmıyor ya da model belleğe sığmadı.
         return "", "", (
-            f"Bağlantı/çalışma hatası: {e}\n\n"
+            f"Bağlantı/çalışma hatası: {kutu['istisna']}\n\n"
             f"Ollama'nın açık olduğundan emin olun ('ollama run {MODEL_ADI}')."
         )
 
+    sonuc = kutu["sonuc"]
     if sonuc["hata"]:
         return "", "", f"{sonuc['hata']}\n\nHam yanıt:\n{sonuc['ham_yanit']}"
 
-    return sonuc["aciklama"], ", ".join(sonuc["etiketler"]), "Betimleme hazır."
+    return sonuc["aciklama"], ", ".join(sonuc["etiketler"]), f"Betimleme hazır ({gecen} sn)."
 
 
 # analytics_enabled=False: Gradio varsayılan olarak kullanım bilgisi gönderiyor, kapatıldı.
@@ -98,7 +132,8 @@ with gr.Blocks(title="Görsel Betimleyici", analytics_enabled=False) as arayuz:
             )
             durum = gr.Textbox(label="Durum", lines=2, interactive=False)
 
-    # İki adım: önce "işleniyor" yazısı anında görünür, sonra uzun süren model çağrısı başlar.
+    # İki adım: önce eski sonuç temizlenir, sonra uzun süren model çağrısı başlar. İkinci
+    # adımda ilerleme çubuğu geçen süreye göre dolar (bkz. betimle()).
     betimle_dugmesi.click(
         fn=lambda: ("", "", "Fotoğraf analiz ediliyor, lütfen bekleyin..."),
         outputs=[aciklama_kutusu, etiket_kutusu, durum],
@@ -106,6 +141,7 @@ with gr.Blocks(title="Görsel Betimleyici", analytics_enabled=False) as arayuz:
         fn=betimle,
         inputs=gorsel,
         outputs=[aciklama_kutusu, etiket_kutusu, durum],
+        show_progress="full",
     )
 
 
