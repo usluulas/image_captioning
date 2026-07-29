@@ -6,6 +6,8 @@ import ollama
 from PIL import Image, ImageOps
 import pillow_heif
 
+import ocr  # Görseldeki yazıyı Tesseract ile okur; kurulu değilse sessizce boş liste döner.
+
 # Ollama sunucusu HEIC/HEIF'i çözemiyor (yalnızca JPEG/PNG/WEBP gibi standart formatları
 # destekliyor); bu yüzden iPhone fotoğrafları modele gitmeden önce PNG'ye çevrilir.
 pillow_heif.register_heif_opener()
@@ -183,7 +185,19 @@ def gorseli_betimle(dosya_yolu):
         data = guvenli_json_ayikla(response['message']['content'])
         aciklama = data.get("aciklama", "Betimleme çıkarılamadı.")
         etiketler = etiketleri_normallestir(data.get("etiketler", []))
-        return f"BETİMLEME:\n{aciklama}\n\nETİKETLER:\n{', '.join(etiketler)}"
+
+        # Yazı okuma ayrı bir motorla yapılıyor (bkz. ocr.py). Modele "yazıları da listele"
+        # dedirtmeyi iki turda denedik: yoğun metni (haber görselindeki fiyat tablosu) hiç
+        # alamadı ve yazısız görsellere metin uydurmaya başladı. Tesseract tam tersi —
+        # stilize başlıkları okuyamıyor (onlar zaten betimlemeye giriyor) ama düz metni
+        # doğru okuyor ve okuyamadığında boş dönüyor.
+        yazilar = ocr.yazilari_oku(dosya_yolu)
+
+        bolumler = [f"BETİMLEME:\n{aciklama}"]
+        if yazilar:  # Yazı bulunamadıysa başlık hiç basılmaz.
+            bolumler.append("YAZILAR:\n" + "\n".join(yazilar))
+        bolumler.append(f"ETİKETLER:\n{', '.join(etiketler)}")
+        return "\n\n".join(bolumler)
     except Exception as e:
         return f"[HATA] Yapay zeka istenen formatta yanıt veremedi (Sebep: {str(e)[:50]}).\n\nHam Yanıt:\n" + response['message']['content']
 
