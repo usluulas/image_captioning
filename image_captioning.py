@@ -33,11 +33,21 @@ NUM_THREAD = os.cpu_count() or 4
 # üretmesi gerektiği için tek cümlelik çıktıya göre daha geniş bir pay bırakıldı.
 NUM_PREDICT = 700
 
+# Ollama, 4GB'lık kartta kendine ~2.8 GiB tavan koyuyor (log: available="2.8 GiB" free="3.2 GiB")
+# ve model buna sığmadığı için katmanların çoğunu CPU'ya taşıyor (ölçüm: 67%/33% CPU/GPU).
+# Bu sadece yavaşlatmıyor, ÇIKTIYI DA BOZUYOR: harry_potter.jpg'de afişte hiç olmayan
+# "Voldemort", "Draco" ve "ejderha", sm.jpg'de uydurma "Meryl Streep" çıkıyordu. Tüm katmanlar
+# GPU'ya zorlandığında bu uydurmalar kayboldu, afişteki 6 karakter doğru sayıldı.
+# GPU'suz makinede (Docker/CPU) parametre sessizce yok sayılıyor — çıktı birebir aynı kalıyor.
+# Sığmayan makinelerde ortam değişkeniyle düşürülebilir.
+NUM_GPU = int(os.environ.get("NUM_GPU", "34"))  # gemma3:4b'nin katman sayısı
+
 # temperature 0.0 (greedy) modeli deterministik yapar, halüsinasyonu azaltır.
 # repeat_penalty greedy decoding'de oluşabilecek tekrar döngülerine karşı güvenlik payı.
 ORTAK_SECENEKLER = {
     'num_ctx': NUM_CTX,
     'num_thread': NUM_THREAD,
+    'num_gpu': NUM_GPU,
     'temperature': 0.0,
     'repeat_penalty': 1.15,
 }
