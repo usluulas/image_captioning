@@ -35,7 +35,7 @@ NUM_THREAD = os.cpu_count() or 4
 # üretmesi gerektiği için tek cümlelik çıktıya göre daha geniş bir pay bırakıldı.
 NUM_PREDICT = 700
 
-# Ollama, 4GB'lık kartta kendine ~2.8 GiB tavan koyuyor (log: available="2.8 GiB" free="3.2 GiB")
+# Ollama, 4GB'lık kartta kendine ~2.8 GiB tavan koy uyor (log: available="2.8 GiB" free="3.2 GiB")
 # ve model buna sığmadığı için katmanların çoğunu CPU'ya taşıyor (ölçüm: 67%/33% CPU/GPU).
 # Bu sadece yavaşlatmıyor, ÇIKTIYI DA BOZUYOR: harry_potter.jpg'de afişte hiç olmayan
 # "Voldemort", "Draco" ve "ejderha", sm.jpg'de uydurma "Meryl Streep" çıkıyordu. Tüm katmanlar
