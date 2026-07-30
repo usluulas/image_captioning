@@ -6,8 +6,6 @@ import ollama
 from PIL import Image, ImageOps
 import pillow_heif
 
-import ocr  # Görseldeki yazıyı Tesseract ile okur; kurulu değilse sessizce boş liste döner.
-
 # Ollama sunucusu HEIC/HEIF'i çözemiyor (yalnızca JPEG/PNG/WEBP gibi standart formatları
 # destekliyor); bu yüzden iPhone fotoğrafları modele gitmeden önce PNG'ye çevrilir.
 pillow_heif.register_heif_opener()
@@ -69,8 +67,9 @@ DESTEKLENEN_UZANTILAR = (".jpg", ".jpeg", ".png", ".webp", ".bmp", ".heic", ".he
 # NOT: Bu prompt oturum boyunca kural kural büyümüştü (847 kelimeye çıkmıştı) ve bir noktada
 # 4GB VRAM'deki hesaplama/bellek baskısı üretimi yarıda kestiriyordu (anitkabir.jpg'de done=False).
 # Aynı kuralları koruyup daha yoğun/derli toplu (~430 kelime) yeniden yazınca hem çökme ortadan
-# kalktı hem de birkaç vaka (isim tanıma, OCR, renk) daha iyi çalıştı. Regresyon testi: kelebek,
-# gitar, renk/eylem/bağlamsal sızma, OCR, oran/hava durumu, ikonik isim vakalarının hepsi korundu.
+# kalktı hem de birkaç vaka (isim tanıma, yazı alıntılama, renk) daha iyi çalıştı. Regresyon testi:
+# kelebek, gitar, renk/eylem/bağlamsal sızma, yazı alıntılama (BIG BROTHER), oran/hava durumu,
+# ikonik isim vakalarının hepsi korundu.
 SISTEM_MESAJI = """
 Sen profesyonel bir Arşiv Asistanısın. Sana verilen fotoğrafı betimleyeceksin.
 
@@ -192,18 +191,7 @@ def gorseli_betimle(dosya_yolu):
         aciklama = data.get("aciklama", "Betimleme çıkarılamadı.")
         etiketler = etiketleri_normallestir(data.get("etiketler", []))
 
-        # Yazı okuma ayrı bir motorla yapılıyor (bkz. ocr.py). Modele "yazıları da listele"
-        # dedirtmeyi iki turda denedik: yoğun metni (haber görselindeki fiyat tablosu) hiç
-        # alamadı ve yazısız görsellere metin uydurmaya başladı. Tesseract tam tersi —
-        # stilize başlıkları okuyamıyor (onlar zaten betimlemeye giriyor) ama düz metni
-        # doğru okuyor ve okuyamadığında boş dönüyor.
-        yazilar = ocr.yazilari_oku(dosya_yolu)
-
-        bolumler = [f"BETİMLEME:\n{aciklama}"]
-        if yazilar:  # Yazı bulunamadıysa başlık hiç basılmaz.
-            bolumler.append("YAZILAR:\n" + "\n".join(yazilar))
-        bolumler.append(f"ETİKETLER:\n{', '.join(etiketler)}")
-        return "\n\n".join(bolumler)
+        return f"BETİMLEME:\n{aciklama}\n\nETİKETLER:\n{', '.join(etiketler)}"
     except Exception as e:
         return f"[HATA] Yapay zeka istenen formatta yanıt veremedi (Sebep: {str(e)[:50]}).\n\nHam Yanıt:\n" + response['message']['content']
 
