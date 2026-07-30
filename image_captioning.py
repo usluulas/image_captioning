@@ -45,13 +45,19 @@ NUM_PREDICT = 700
 NUM_GPU = int(os.environ.get("NUM_GPU", "34"))  # gemma3:4b'nin katman sayısı
 
 # temperature 0.0 (greedy) modeli deterministik yapar, halüsinasyonu azaltır.
-# repeat_penalty greedy decoding'de oluşabilecek tekrar döngülerine karşı güvenlik payı.
+# repeat_penalty tekrar döngülerine karşı güvenlik payı; ama 1.15 fazla agresifti. Greedy
+# decoding'de cümlede geçen bir kelime etikette tekrarlanınca ceza doğru token'ı bastırıp
+# kelimeyi ortasından bozuyordu: "turuncu" -> "turuncugüç" / "turuncuya" (10 görselin 2'sinde,
+# ikisi de cümlede "turuncu" geçtikten sonra). 1.05'te bu kayboldu; yan etki olarak bej arka
+# plan rengi kuşa sızmayı bıraktı ve model görselin türünü ("stilize edilmiş") kendiliğinden
+# söylemeye başladı. 1.0 fazla düşük: yeni bozulma ("kuşbacakları") ve "stilize yüz" -> "maske"
+# gerilemesi üretti. Tekrar döngüsü 1.05'te regresyon setinin hiçbir görselinde görülmedi.
 ORTAK_SECENEKLER = {
     'num_ctx': NUM_CTX,
     'num_thread': NUM_THREAD,
     'num_gpu': NUM_GPU,
     'temperature': 0.0,
-    'repeat_penalty': 1.15,
+    'repeat_penalty': 1.05,
 }
 
 DESTEKLENEN_UZANTILAR = (".jpg", ".jpeg", ".png", ".webp", ".bmp", ".heic", ".heif")
