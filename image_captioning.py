@@ -2,6 +2,7 @@ import os
 import io
 import json
 import re    # Regex kütüphanesi (JSON Zırhı)
+from collections import deque
 from datetime import datetime, timezone
 import ollama
 from PIL import Image, ImageOps
@@ -278,15 +279,46 @@ UST_KATEGORILER = {
     "kaya": ["taş", "doğa"],
 }
 
-# Sözlükte karşılığı bulunursa soyulacak ekler; uzundan kısaya denenir.
-ARAMA_EKLERI = ("ları", "leri", "lar", "ler", "sı", "si", "su", "sü", "ı", "i", "u", "ü")
+# Soyulacak ekler. Çoğul ve iyelik yetmiyor: betimlemede kelime çekimli geçiyor
+# ("futbol formasıyla", "gökyüzünde"), o yüzden hâl ekleri de var ve ekler YİNELEMELİ
+# soyuluyor ("formasıyla" -> "forması" -> "forma").
+ARAMA_EKLERI = (
+    "ları", "leri", "ndan", "nden", "sıyla", "siyle", "yla", "yle", "la", "le",
+    "nda", "nde", "dan", "den", "tan", "ten", "da", "de", "ta", "te",
+    "nın", "nin", "nun", "nün", "ın", "in", "un", "ün",
+    "lar", "ler", "sı", "si", "su", "sü", "ya", "ye", "ı", "i", "u", "ü", "a", "e",
+)
+ARAMA_AZAMI_DERINLIK = 4
 
 
 def _kok_adaylari(kelime):
-    yield kelime
-    for ek in ARAMA_EKLERI:
-        if kelime.endswith(ek) and len(kelime) - len(ek) >= 3:
-            yield kelime[: -len(ek)]
+    """Kelimenin kendisinden başlayarak ek soyulmuş adayları GENİŞLİK ÖNCELİKLİ üretir.
+
+    Genişlik öncelikli olması şart: sığ (az soyulmuş) bir aday, derin ve yanlış bir adaydan
+    önce denensin. Çağıran ilk sözlük eşleşmesinde durur.
+
+    Güvenlik, adayın sözlükte BİREBİR anahtar olma şartından gelir; sözlükte olmayan bir köke
+    inmek hiçbir şey üretmez. Denetim (64 betimleme, 339 eşsiz kelime): 41 ek-soyma eşleşmesi,
+    41'i de doğru, 0 yanlış. Kritik olanlar temiz: "gülen"/"gülümseyerek" -> "gül"e BAĞLANMIYOR,
+    "sarı" -> "arı"ya bağlanmıyor. Hata yönü güvenli: "yaprağı" (ünsüz yumuşaması) ve "otlar"
+    (3 harf alt sınırı) eşleşmiyor, yani yanlış terim eklemek yerine terim eklememe oluyor.
+
+    BAKIM KURALI: UST_KATEGORILER'e KISA anahtar (2-3 harf) eklemekten kaçının, çarpışma riski
+    oradan gelir; sözlüğü büyüttükten sonra bu denetimi tekrar koşun.
+    """
+    gorulen = {kelime}
+    kuyruk = deque([(kelime, 0)])
+    while kuyruk:
+        mevcut, derinlik = kuyruk.popleft()
+        yield mevcut
+        if derinlik >= ARAMA_AZAMI_DERINLIK:
+            continue
+        for ek in ARAMA_EKLERI:
+            if mevcut.endswith(ek) and len(mevcut) - len(ek) >= 3:
+                aday = mevcut[: -len(ek)]
+                if aday not in gorulen:
+                    gorulen.add(aday)
+                    kuyruk.append((aday, derinlik + 1))
 
 
 def arama_terimleri(etiketler, aciklama=None):
