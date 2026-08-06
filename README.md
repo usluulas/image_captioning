@@ -32,6 +32,31 @@ Bunlar yalnızca Python bağımlılıklarıdır; **Ollama'nın kendisi ayrı bir
 `pip` ile kurulmaz. Docker ile çalıştırıyorsanız bu adımların hiçbirini yapmanıza gerek yoktur —
 imaj bunları kendisi kurar.
 
+### Koşu günlüğü
+
+Her koşu `loglar/kosular.jsonl` dosyasına tek satır JSON olarak eklenir. Amaç modeli
+iyileştirirken elde veri olması: kullanıcıya gösterilmeyen `gozlemler` alanı, ham model yanıtı,
+süre dökümü, token sayıları ve retry sayısı (`denemeler` listesinin uzunluğu).
+
+Süre dökümü Ollama'dan hazır gelir ve öğreticidir — örnek bir koşu:
+
+```
+toplam 52.5 sn = yükleme 7.4 + prompt işleme 39.2 + üretim 5.3
+girdi token: 1320   çıktı token: 160
+```
+
+Sürenin ~%75'i görselin işlenmesine gidiyor, üretim yalnızca ~5 saniye. Girdi token sayısı
+farklı görsellerde bile sabit; görsel sabit sayıda token'a çevriliyor, dosya boyutunun süreye
+etkisi yok. Pratik sonucu: cümle uzunluğu veya `num_predict` gibi **çıktı tarafındaki ayarlar
+hızı değiştirmez**.
+
+Günlük yazımı başarısız olursa (salt okunur dosya sistemi, izin sorunu) program normal çalışmaya
+devam eder, sessizce günlük tutmaz. Ortam değişkenleri: `GUNLUK_DOSYASI` ile yol değiştirilir,
+`GUNLUK_KAPALI=1` ile tamamen kapatılır. `loglar/` klasörü `.gitignore` kapsamındadır.
+
+Docker'da günlük container içine yazılır ve container silinince kaybolur; kalıcı olması için
+`docker-compose.yml`'deki `betimleyici` servisine bir volume eklemek gerekir.
+
 ### Görseldeki yazılar
 
 Ayrı bir yazı okuma (OCR) adımı yoktur. Afiş başlığı, tabela, logo gibi okunabilir yazıları model
@@ -46,6 +71,7 @@ görsellerde metnin tamamını beklemeyin.
 | Dosya | Görevi |
 |---|---|
 | `image_captioning.py` | Ana program: prompt, görsel hazırlama, model çağrısı, terminal arayüzü |
+| `loglar/kosular.jsonl` | Koşu günlüğü (otomatik oluşur, repoya girmez) |
 | `requirements.txt` | Python bağımlılıkları (sürümler sabitlenmiştir) |
 | `Dockerfile` | Python ortamının tarifi |
 | `entrypoint.sh` | Container açılışında Ollama'yı bekler, model yoksa indirir |

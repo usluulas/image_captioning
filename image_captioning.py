@@ -2,6 +2,7 @@ import os
 import io
 import json
 import re    # Regex kütüphanesi (JSON Zırhı)
+from datetime import datetime, timezone
 import ollama
 from PIL import Image, ImageOps
 import pillow_heif
@@ -144,7 +145,54 @@ def etiketleri_normallestir(etiketler):
 
 
 # ==========================================
-# 3. GÖRSEL ANALİZ
+# 3. KOŞU GÜNLÜĞÜ (JSONL)
+# ==========================================
+# Modeli iyileştirirken en çok ihtiyaç duyulan şey geçmiş koşuların ham verisi: hangi görselde
+# hangi gözlemler üretildi, süre nereye gitti, retry oldu mu, kaç token harcandı. Bunların hepsi
+# Ollama yanıtında HAZIR geliyor; ayrıca ölçmeye gerek yok.
+# İlk ölçümün gösterdiği (neko_gitar, 52.5 sn): yükleme 7.4 + prompt işleme 39.2 + üretim 5.3.
+# Yani sürenin ~%75'i görsel işleme, üretim yalnızca ~5 sn. Girdi token'ı farklı görsellerde bile
+# sabit (1320) — görsel sabit sayıda token'a çevriliyor, dosya boyutunun süreye etkisi yok.
+# Buradan çıkan kural: num_predict/cümle uzunluğu gibi ÇIKTI tarafındaki ayarlar hızı değiştirmez.
+#
+# Her koşu tek satır JSON (JSONL): ekleme atomik, dosya bozulmadan büyür, satır satır analiz
+# edilir. Günlük yazımı BAŞARISIZ OLURSA betimleme akışı etkilenmez — arşiv işi günlükten önemli.
+GUNLUK_DOSYASI = os.environ.get("GUNLUK_DOSYASI", os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "loglar", "kosular.jsonl"))
+GUNLUK_KAPALI = os.environ.get("GUNLUK_KAPALI", "") == "1"
+
+
+def _yanit_olcumleri(yanit):
+    """Ollama yanıtında hazır gelen ölçümler; süreler nanosaniyeden saniyeye çevrilir."""
+    def sn(deger):
+        return round(deger / 1e9, 2) if isinstance(deger, int) else None
+
+    return {
+        "done": yanit.get("done"),
+        "done_reason": yanit.get("done_reason"),
+        "toplam_sn": sn(yanit.get("total_duration")),
+        "yukleme_sn": sn(yanit.get("load_duration")),
+        "prompt_isleme_sn": sn(yanit.get("prompt_eval_duration")),
+        "uretim_sn": sn(yanit.get("eval_duration")),
+        "girdi_token": yanit.get("prompt_eval_count"),
+        "cikti_token": yanit.get("eval_count"),
+    }
+
+
+def _gunluge_yaz(kayit):
+    if GUNLUK_KAPALI:
+        return
+    try:
+        os.makedirs(os.path.dirname(GUNLUK_DOSYASI), exist_ok=True)
+        with open(GUNLUK_DOSYASI, "a", encoding="utf-8") as dosya:
+            dosya.write(json.dumps(kayit, ensure_ascii=False) + "\n")
+    except Exception:
+        # Salt okunur dosya sistemi, izin sorunu, dolu disk: günlük tutulamaz ama program sürer.
+        pass
+
+
+# ==========================================
+# 4. GÖRSEL ANALİZ
 # ==========================================
 def gorsel_veri_hazirla(dosya_yolu):
     # Ollama'ya dosya yolu doğrudan verilirse ham piksel verisi hiçbir düzeltme yapılmadan
@@ -179,25 +227,48 @@ def _model_cagir(gorsel_verisi):
 
 def gorseli_betimle(dosya_yolu):
     gorsel_verisi = gorsel_veri_hazirla(dosya_yolu)
+    # Günlük kaydı koşu boyunca doldurulur; retry sayısı "denemeler" listesinin uzunluğudur.
+    kayit = {
+        "zaman": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "dosya": os.path.basename(dosya_yolu),
+        "model": MODEL_ADI,
+        "secenekler": {**ORTAK_SECENEKLER, "num_predict": NUM_PREDICT},
+        "denemeler": [],
+    }
+
     response = _model_cagir(gorsel_verisi)
+    kayit["denemeler"].append(_yanit_olcumleri(response))
 
     # 4GB VRAM'de GPU zaman zaman üretimi ortada kesebiliyor (Ollama watchdog timeout);
     # bu durumda yanıt 'done=False' ve JSON yarım gelir. Bir kez otomatik yeniden dene.
     if not response.get('done'):
         response = _model_cagir(gorsel_verisi)
+        kayit["denemeler"].append(_yanit_olcumleri(response))
+
+    # Ayrıştırma başarısız olursa elimizdeki tek kanıt ham yanıt olur; her durumda kaydedilir.
+    kayit["ham_yanit"] = response['message']['content']
 
     try:
         data = guvenli_json_ayikla(response['message']['content'])
         aciklama = data.get("aciklama", "Betimleme çıkarılamadı.")
         etiketler = etiketleri_normallestir(data.get("etiketler", []))
 
+        # "gozlemler" kullanıcıya gösterilmiyor ama hataların çoğu orada doğduğu için
+        # günlüğe yazılıyor; sonraki iyileştirmeler bu alana bakarak yapılabilsin.
+        kayit["gozlemler"] = data.get("gozlemler")
+        kayit["aciklama"] = aciklama
+        kayit["etiketler"] = etiketler
+        _gunluge_yaz(kayit)
+
         return f"BETİMLEME:\n{aciklama}\n\nETİKETLER:\n{', '.join(etiketler)}"
     except Exception as e:
+        kayit["hata"] = f"{type(e).__name__}: {str(e)[:200]}"
+        _gunluge_yaz(kayit)
         return f"[HATA] Yapay zeka istenen formatta yanıt veremedi (Sebep: {str(e)[:50]}).\n\nHam Yanıt:\n" + response['message']['content']
 
 
 # ==========================================
-# 4. ANA TERMİNAL İŞLEYİŞİ
+# 5. ANA TERMİNAL İŞLEYİŞİ
 # ==========================================
 def main():
     print("=" * 60)
