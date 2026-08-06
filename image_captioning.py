@@ -145,7 +145,144 @@ def etiketleri_normallestir(etiketler):
 
 
 # ==========================================
-# 3. KOŞU GÜNLÜĞÜ (JSONL)
+# 3. ARAMA TERİMLERİ (ÜST KATEGORİ GENİŞLETMESİ)
+# ==========================================
+# Çıktı bir arşiv sitesinde aranacak. Model "kedi" etiketi üretiyor ama kullanıcı "hayvan" diye
+# arayabiliyor; etiketler somut, aramalar geneldir. Bu boşluk MODELE SORULMADAN, sabit sözlükle
+# kapatılıyor: deterministik, anlık (model çağrısı yok) ve halüsinasyon riski sıfır.
+#
+# Bu oturumda üretilmiş 91 gerçek etikete bakılarak tasarlandı:
+#   - Türkçede tamlamanın başı SONDA olduğu için son kelimeye bakılır ("mor çiçek" -> "çiçek").
+#   - Baş ismin kendisi de arama terimi olur; yoksa "mor çiçek" etiketli fotoğraf düz "çiçek"
+#     aramasında çıkmaz.
+#   - Ekler YALNIZCA sonuç sözlükte varsa soyulur ("seyirciler"->"seyirci", "Kulesi"->"kule");
+#     böylece uydurma kök üretilmez.
+#   - Sözlükte olmayan sessizce atlanır. Renkler ("kırmızı"), niteleyiciler ("sarı merkez") ve
+#     özel adlar ("Paris", "Hogwarts") böylece kendiliğinden dışarıda kalır.
+# BELİRSİZ kelimeler bilerek dışarıda: "oyuncu" (sporcu mu aktör mü), "kale" (yapı mı kaleci mi),
+# "karakter", "portre". Arşivde yanlış genişletme, eksik genişletmeden daha zararlıdır.
+UST_KATEGORILER = {
+    # hayvanlar
+    "kedi": ["hayvan", "evcil hayvan", "memeli"],
+    "köpek": ["hayvan", "evcil hayvan", "memeli"],
+    "fil": ["hayvan", "memeli", "yaban hayatı"],
+    "gergedan": ["hayvan", "memeli", "yaban hayatı"],
+    "zürafa": ["hayvan", "memeli", "yaban hayatı"],
+    "kuş": ["hayvan"],
+    "baykuş": ["kuş", "hayvan"],
+    "kartal": ["kuş", "hayvan"],
+    "böcek": ["hayvan"],
+    "kelebek": ["böcek", "hayvan"],
+    "arı": ["böcek", "hayvan"],
+    "karınca": ["böcek", "hayvan"],
+    # bitkiler
+    "çiçek": ["bitki", "doğa"],
+    "gül": ["çiçek", "bitki"],
+    "lavanta": ["çiçek", "bitki"],
+    "papatya": ["çiçek", "bitki"],
+    "ağaç": ["bitki", "doğa"],
+    "sakura": ["ağaç", "bitki"],
+    "ot": ["bitki"],
+    "çimen": ["bitki", "doğa"],
+    "yaprak": ["bitki"],
+    "bitki": ["doğa"],
+    # insan / spor
+    "futbolcu": ["sporcu", "insan"],
+    "voleybolcu": ["sporcu", "insan"],
+    "sporcu": ["insan"],
+    "seyirci": ["insan", "kalabalık"],
+    "kadın": ["insan"],
+    "adam": ["insan"],
+    "çocuk": ["insan"],
+    "futbol": ["spor"],
+    "voleybol": ["spor"],
+    "forma": ["giysi", "spor kıyafeti"],
+    "şapka": ["giysi"],
+    # nesneler
+    "gitar": ["müzik aleti", "enstrüman"],
+    "tren": ["taşıt", "ulaşım"],
+    "otomobil": ["taşıt", "ulaşım"],
+    "araba": ["taşıt", "ulaşım"],
+    "patates": ["sebze", "yiyecek"],
+    "logo": ["grafik"],
+    "yazı": ["metin"],
+    # yapı / mekan
+    "kule": ["yapı", "anıt"],
+    "bina": ["yapı"],
+    "duvar": ["yapı"],
+    "stadyum": ["yapı", "spor tesisi"],
+    "saray": ["yapı", "tarihi eser"],
+    "kilise": ["yapı", "ibadethane"],
+    "cami": ["yapı", "ibadethane"],
+    "müze": ["yapı", "kültür"],
+    # sanat / görsel tür
+    "fresk": ["resim", "sanat eseri"],
+    "tablo": ["resim", "sanat eseri"],
+    "afiş": ["grafik", "basılı materyal"],
+    "illüstrasyon": ["çizim", "grafik"],
+    "çizim": ["grafik"],
+    "anime": ["animasyon", "çizgi"],
+    # doğa / ortam
+    "gökyüzü": ["doğa"],
+    "bulut": ["gökyüzü", "doğa"],
+    "güneş": ["gökyüzü", "doğa"],
+    "deniz": ["su", "doğa"],
+    "göl": ["su", "doğa"],
+    "nehir": ["su", "doğa"],
+    "dalga": ["su", "doğa"],
+    "dağ": ["doğa", "coğrafya"],
+    "orman": ["doğa", "coğrafya"],
+    "bahçe": ["doğa", "peyzaj"],
+    "manzara": ["doğa", "peyzaj"],
+    "taş": ["doğa", "mineral"],
+    "kaya": ["taş", "doğa"],
+}
+
+# Sözlükte karşılığı bulunursa soyulacak ekler; uzundan kısaya denenir.
+ARAMA_EKLERI = ("ları", "leri", "lar", "ler", "sı", "si", "su", "sü", "ı", "i", "u", "ü")
+
+
+def turkce_kucult(metin):
+    """Python'un .lower()'ı Türkçede yanlış sonuç verir: I -> i yapar, oysa ı olmalı."""
+    return metin.replace("İ", "i").replace("I", "ı").lower()
+
+
+def _kok_adaylari(kelime):
+    yield kelime
+    for ek in ARAMA_EKLERI:
+        if kelime.endswith(ek) and len(kelime) - len(ek) >= 3:
+            yield kelime[: -len(ek)]
+
+
+def arama_terimleri(etiketler):
+    """Etiketlerden üst kategori/genel terimler üretir. Etiketlerin kendisi sonuçta YER ALMAZ."""
+    mevcut = {turkce_kucult(e) for e in etiketler}
+    sonuc = []
+    gorulen = set()
+
+    def ekle(terim):
+        anahtar = turkce_kucult(terim)
+        if anahtar not in mevcut and anahtar not in gorulen:
+            gorulen.add(anahtar)
+            sonuc.append(terim)
+
+    for etiket in etiketler:
+        kucuk = turkce_kucult(etiket)
+        kelimeler = kucuk.split()
+        if not kelimeler:
+            continue
+        for aday in _kok_adaylari(kelimeler[-1]):
+            if aday in UST_KATEGORILER:
+                if aday != kucuk:
+                    ekle(aday)
+                for terim in UST_KATEGORILER[aday]:
+                    ekle(terim)
+                break  # ilk eşleşen kök yeter
+    return sonuc
+
+
+# ==========================================
+# 4. KOŞU GÜNLÜĞÜ (JSONL)
 # ==========================================
 # Modeli iyileştirirken en çok ihtiyaç duyulan şey geçmiş koşuların ham verisi: hangi görselde
 # hangi gözlemler üretildi, süre nereye gitti, retry oldu mu, kaç token harcandı. Bunların hepsi
@@ -192,7 +329,7 @@ def _gunluge_yaz(kayit):
 
 
 # ==========================================
-# 4. GÖRSEL ANALİZ
+# 5. GÖRSEL ANALİZ
 # ==========================================
 def gorsel_veri_hazirla(dosya_yolu):
     # Ollama'ya dosya yolu doğrudan verilirse ham piksel verisi hiçbir düzeltme yapılmadan
@@ -258,9 +395,17 @@ def gorseli_betimle(dosya_yolu):
         kayit["gozlemler"] = data.get("gozlemler")
         kayit["aciklama"] = aciklama
         kayit["etiketler"] = etiketler
+
+        # Sözlük zamanla büyüyeceği için üretilen terimler de kaydediliyor; aksi hâlde günlük,
+        # o koşuda gerçekte ne basıldığının kaydı olmaktan çıkardı.
+        arama = arama_terimleri(etiketler)
+        kayit["arama"] = arama
         _gunluge_yaz(kayit)
 
-        return f"BETİMLEME:\n{aciklama}\n\nETİKETLER:\n{', '.join(etiketler)}"
+        bolumler = [f"BETİMLEME:\n{aciklama}", f"ETİKETLER:\n{', '.join(etiketler)}"]
+        if arama:  # Sözlükte karşılık yoksa başlık hiç basılmaz.
+            bolumler.append(f"ARAMA:\n{', '.join(arama)}")
+        return "\n\n".join(bolumler)
     except Exception as e:
         kayit["hata"] = f"{type(e).__name__}: {str(e)[:200]}"
         _gunluge_yaz(kayit)
@@ -268,7 +413,7 @@ def gorseli_betimle(dosya_yolu):
 
 
 # ==========================================
-# 5. ANA TERMİNAL İŞLEYİŞİ
+# 6. ANA TERMİNAL İŞLEYİŞİ
 # ==========================================
 def main():
     print("=" * 60)

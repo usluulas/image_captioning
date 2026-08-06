@@ -1,7 +1,7 @@
 # image_captioning
 
 Bir fotoğrafı yerel bir görsel-dil modeliyle (Ollama üzerinde `gemma3:4b-it-qat`) analiz edip
-Türkçe tek cümlelik betimleme ve etiketler üreten terminal uygulaması.
+Türkçe tek cümlelik betimleme, etiketler ve arama terimleri üreten terminal uygulaması.
 
 ---
 ## Docker olmadan çalıştırma
@@ -31,6 +31,27 @@ pip install ollama==0.6.2 Pillow==12.3.0 pillow-heif==1.4.0
 Bunlar yalnızca Python bağımlılıklarıdır; **Ollama'nın kendisi ayrı bir programdır** (1. adım) ve
 `pip` ile kurulmaz. Docker ile çalıştırıyorsanız bu adımların hiçbirini yapmanıza gerek yoktur —
 imaj bunları kendisi kurar.
+
+### Arama terimleri
+
+Çıktıdaki `ARAMA` bölümü, etiketlerden türetilen daha genel terimlerdir. Model somut etiket
+üretir ("kedi", "mor çiçek"), oysa arşivde arama yapan kişi genel arar ("hayvan", "çiçek").
+Örnek:
+
+```
+ETİKETLER: mor çiçek, siyah böcek, sarı merkez, kuru ot, gri taş, pembe kenar
+ARAMA:     çiçek, bitki, doğa, böcek, hayvan, ot, taş, mineral
+```
+
+Bu iş **modele sorulmaz**; `UST_KATEGORILER` sözlüğünden deterministik olarak üretilir. Model
+çağrısı olmadığı için ek süre getirmez ve uydurma terim üretemez. Türkçede tamlamanın başı sonda
+olduğu için son kelimeye bakılır ("mor çiçek" → "çiçek"); çoğul ve iyelik ekleri yalnızca sonuç
+sözlükte varsa soyulur ("seyirciler" → "seyirci", "Eiffel Kulesi" → "kule").
+
+Sözlükte karşılığı olmayan etiketler sessizce atlanır — renkler, niteleyiciler ("sarı merkez")
+ve özel adlar ("Paris", "Hogwarts") böylece dışarıda kalır. Belirsiz kelimeler ("oyuncu",
+"kale", "karakter") bilerek eklenmemiştir: arşivde yanlış genişletme, eksik genişletmeden daha
+zararlıdır. Sözlük `image_captioning.py` içindedir ve zamanla büyütülmek üzere tasarlanmıştır.
 
 ### Koşu günlüğü
 
