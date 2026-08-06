@@ -117,17 +117,51 @@ Yanıtını KESİNLİKLE SADECE aşağıdaki JSON formatında ver:
 
 
 # ==========================================
-# 2. YARDIMCI FONKSİYON: JSON YAKALAYICI (REGEX YEDEKLİ)
+# 2. JSON AYIKLAMA VE ŞEMA DOĞRULAMA
 # ==========================================
+# Prompt en fazla 6 etiket istiyor; kod da aynı sayıyı zorluyor ki ikisi ayrışmasın.
+AZAMI_ETIKET = 6
+# Prompt 1-3 kelimelik etiket istiyor. Cümle uzunluğunda bir "etiket" arşiv indeksinde
+# kullanılamaz; kırpmak yerine atılır (ham yanıt günlükte durduğu için kanıt kaybolmaz).
+AZAMI_ETIKET_KELIME = 5
+AZAMI_ETIKET_KARAKTER = 40
+
+
+def turkce_kucult(metin):
+    """Python'un .lower()'ı Türkçede yanlış sonuç verir: I -> i yapar, oysa ı olmalı; ayrıca
+    "KEDİ".lower() birleşik noktalı "kedi̇" üretir ve "kedi" ile eşleşmez. Bu yüzden hem etiket
+    mükerrer elemesinde hem arama terimlerinde bu fonksiyon kullanılır."""
+    return metin.replace("İ", "i").replace("I", "ı").lower()
+
+
 def guvenli_json_ayikla(ham_metin):
     try:
-        return json.loads(ham_metin.strip())
+        veri = json.loads(ham_metin.strip())
     except json.JSONDecodeError:
         # format='json' zaten geçerli JSON garanti eder; bu regex sadece ekstra güvenlik katmanı.
+        # Greedy (.*) bilinçli: non-greedy, iç içe nesnede ilk '}' ile kesip geçersiz JSON verir.
         match = re.search(r'\{.*\}', ham_metin, re.DOTALL)
         if not match:
             raise ValueError("Yapay zeka yanıtı içinde geçerli bir JSON bloğu bulunamadı.")
-        return json.loads(match.group(0))
+        veri = json.loads(match.group(0))
+
+    # Geçerli JSON, doğru şema demek değil: yanıt liste/string/sayı da olabilir. Burada
+    # yakalanmazsa aşağıda anlamsız bir AttributeError'a dönüşürdü.
+    if not isinstance(veri, dict):
+        raise ValueError(f"Yanıt bir JSON nesnesi değil ({type(veri).__name__}).")
+    return veri
+
+
+def metin_dogrula(deger):
+    """Şema string bekleyen alanlar için: string değilse ya da boşsa None döner.
+
+    Doğrulama olmadan {"aciklama": 12} çıktıya "12", null ise "None" olarak basılıyordu.
+    Bozuk alan sessizce düşürülür; ham yanıt günlüğe yazıldığı için kanıt kaybolmaz.
+    """
+    if not isinstance(deger, str):
+        return None
+    temiz = deger.strip()
+    return temiz or None
 
 
 def etiketleri_normallestir(etiketler):
@@ -136,11 +170,17 @@ def etiketleri_normallestir(etiketler):
     gorulen = set()
     sonuc = []
     for etiket in etiketler:
-        temiz = str(etiket).strip()
-        anahtar = temiz.lower()
-        if temiz and anahtar not in gorulen:
+        temiz = metin_dogrula(etiket)
+        if temiz is None:
+            continue
+        if len(temiz) > AZAMI_ETIKET_KARAKTER or len(temiz.split()) > AZAMI_ETIKET_KELIME:
+            continue
+        anahtar = turkce_kucult(temiz)
+        if anahtar not in gorulen:
             gorulen.add(anahtar)
             sonuc.append(temiz)
+        if len(sonuc) >= AZAMI_ETIKET:
+            break
     return sonuc
 
 
@@ -240,11 +280,6 @@ UST_KATEGORILER = {
 
 # Sözlükte karşılığı bulunursa soyulacak ekler; uzundan kısaya denenir.
 ARAMA_EKLERI = ("ları", "leri", "lar", "ler", "sı", "si", "su", "sü", "ı", "i", "u", "ü")
-
-
-def turkce_kucult(metin):
-    """Python'un .lower()'ı Türkçede yanlış sonuç verir: I -> i yapar, oysa ı olmalı."""
-    return metin.replace("İ", "i").replace("I", "ı").lower()
 
 
 def _kok_adaylari(kelime):
@@ -387,7 +422,7 @@ def gorseli_betimle(dosya_yolu):
 
     try:
         data = guvenli_json_ayikla(response['message']['content'])
-        aciklama = data.get("aciklama", "Betimleme çıkarılamadı.")
+        aciklama = metin_dogrula(data.get("aciklama")) or "Betimleme çıkarılamadı."
         etiketler = etiketleri_normallestir(data.get("etiketler", []))
 
         # "gozlemler" kullanıcıya gösterilmiyor ama hataların çoğu orada doğduğu için
