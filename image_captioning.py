@@ -398,6 +398,18 @@ def _model_cagir(gorsel_verisi):
 
 
 def gorseli_betimle(dosya_yolu):
+    """Görseli analiz eder ve SÖZLÜK döndürür; biçimlendirme çağıranın işidir.
+
+    Anahtarlar her iki durumda da aynıdır, böylece tüketici KeyError almaz:
+        aciklama   (str)  başarısızlıkta "Betimleme çıkarılamadı."
+        etiketler  (list) başarısızlıkta boş
+        arama      (list) başarısızlıkta boş
+        ham_yanit  (str)  modelin ham çıktısı
+        hata       (str)  başarıda None; şema/ayrıştırma hatasında "TipAdı: mesaj"
+
+    Durumu ayırt etmek için "hata" alanına bakılır. Bağlantı/Ollama hataları burada
+    yakalanmaz, çağırana yükselir.
+    """
     gorsel_verisi = gorsel_veri_hazirla(dosya_yolu)
     # Günlük kaydı koşu boyunca doldurulur; retry sayısı "denemeler" listesinin uzunluğudur.
     kayit = {
@@ -437,19 +449,45 @@ def gorseli_betimle(dosya_yolu):
         kayit["arama"] = arama
         _gunluge_yaz(kayit)
 
-        bolumler = [f"BETİMLEME:\n{aciklama}", f"ETİKETLER:\n{', '.join(etiketler)}"]
-        if arama:  # Sözlükte karşılık yoksa başlık hiç basılmaz.
-            bolumler.append(f"ARAMA:\n{', '.join(arama)}")
-        return "\n\n".join(bolumler)
+        return {
+            "aciklama": aciklama,
+            "etiketler": etiketler,
+            "arama": arama,
+            "ham_yanit": kayit["ham_yanit"],
+            "hata": None,
+        }
     except Exception as e:
         kayit["hata"] = f"{type(e).__name__}: {str(e)[:200]}"
         _gunluge_yaz(kayit)
-        return f"[HATA] Yapay zeka istenen formatta yanıt veremedi (Sebep: {str(e)[:50]}).\n\nHam Yanıt:\n" + response['message']['content']
+        return {
+            "aciklama": "Betimleme çıkarılamadı.",
+            "etiketler": [],
+            "arama": [],
+            "ham_yanit": kayit["ham_yanit"],
+            "hata": kayit["hata"],
+        }
 
 
 # ==========================================
 # 6. ANA TERMİNAL İŞLEYİŞİ
 # ==========================================
+# gorseli_betimle() veri döndürür, biçimlendirme buraya ait: aynı sonucu bir arayüz ya da
+# toplu işleme script'i kendi istediği gibi sunabilsin diye ikisi ayrıldı.
+def sonucu_bicimlendir(sonuc):
+    """Betimleme sözlüğünü terminale basılacak metne çevirir."""
+    if sonuc["hata"]:
+        return (f"[HATA] Yapay zeka istenen formatta yanıt veremedi "
+                f"(Sebep: {sonuc['hata'][:50]}).\n\nHam Yanıt:\n{sonuc['ham_yanit']}")
+
+    bolumler = [
+        f"BETİMLEME:\n{sonuc['aciklama']}",
+        f"ETİKETLER:\n{', '.join(sonuc['etiketler'])}",
+    ]
+    if sonuc["arama"]:  # Sözlükte karşılık yoksa başlık hiç basılmaz.
+        bolumler.append(f"ARAMA:\n{', '.join(sonuc['arama'])}")
+    return "\n\n".join(bolumler)
+
+
 def main():
     print("=" * 60)
     print(" PROFESYONEL AI GÖRSEL BETİMLEYİCİ (JSON DESTEKLİ) ")
@@ -482,12 +520,12 @@ def main():
     try:
         print("\n[İşlem] Fotoğraf analiz ediliyor, lütfen bekleyin...")
 
-        ai_yaniti = gorseli_betimle(dosya_yolu)
+        sonuc = gorseli_betimle(dosya_yolu)
 
         print("\n" + "=" * 60)
         print(f"--- DOSYA: {os.path.basename(dosya_yolu)} ---")
         print("=" * 60)
-        print(ai_yaniti)
+        print(sonucu_bicimlendir(sonuc))
         print("=" * 60 + "\n")
 
     except Exception as e:
